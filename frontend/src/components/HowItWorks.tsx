@@ -92,15 +92,17 @@ export default function HowItWorks() {
               </p>
             </div>
             
-            {/* Placeholder for screenshot/video */}
+            {/* YouTube Video Demo */}
             <div className="bg-white rounded-xl shadow-lg p-4">
-              <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Zap className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <p className="text-gray-500">Interactive Demo Coming Soon</p>
-                </div>
+              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  className="absolute top-0 left-0 w-full h-full rounded-lg"
+                  src="https://www.youtube.com/embed/FFjKpJbFfxU"
+                  title="Vela Extension Demo"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                ></iframe>
               </div>
             </div>
           </div>

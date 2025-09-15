@@ -16,10 +16,10 @@ export const metadata: Metadata = {
     siteName: 'Vela',
     images: [
       {
-        url: '/og-image.png',
+        url: '/Vela-demo-screenshot.jpg',
         width: 1200,
-        height: 630,
-        alt: 'Vela Chrome Extension Preview',
+        height: 800,
+        alt: 'Vela Chrome Extension - Focus Timer and Task Manager Interface',
       },
     ],
     locale: 'en_US',
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Vela - Transform Your New Tab Into a Productivity Hub',
     description: 'A beautiful Chrome extension that replaces your new tab with a focus timer, task manager, and productivity dashboard.',
-    images: ['/og-image.png'],
+    images: ['/Vela-demo-screenshot.jpg'],
   },
   robots: {
     index: true,
@@ -53,9 +53,10 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icon32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/icon16.png" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/icon48.png" />
+        <link rel="icon" type="image/png" sizes="128x128" href="/icon128.png" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body className={inter.className}>{children}</body>

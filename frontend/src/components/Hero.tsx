@@ -9,6 +9,11 @@ export default function Hero() {
     window.open('https://chrome.google.com/webstore', '_blank')
   }
 
+  const handleWatchDemo = () => {
+    // Open YouTube video in a new tab
+    window.open('https://www.youtube.com/watch?v=FFjKpJbFfxU', '_blank')
+  }
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
@@ -45,7 +50,10 @@ export default function Hero() {
               <ArrowRight className="w-5 h-5 ml-2" />
             </button>
             
-            <button className="inline-flex items-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-lg border-2 border-gray-200 transition-colors duration-200">
+            <button 
+              onClick={handleWatchDemo}
+              className="inline-flex items-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-lg border-2 border-gray-200 transition-colors duration-200"
+            >
               <Play className="w-5 h-5 mr-2" />
               Watch Demo
             </button>
@@ -54,15 +62,15 @@ export default function Hero() {
           {/* Hero Image/Screenshot */}
           <div className="relative max-w-5xl mx-auto">
             <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-white p-2">
-              <div className="bg-gray-100 rounded-xl p-8 min-h-[400px] flex items-center justify-center">
-                {/* Placeholder for actual screenshot */}
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Chrome className="w-12 h-12 text-blue-600" />
-                  </div>
-                  <p className="text-gray-500 text-lg">Vela Extension Preview</p>
-                  <p className="text-gray-400 text-sm mt-2">Screenshot coming soon</p>
-                </div>
+              <div className="rounded-xl overflow-hidden">
+                <Image
+                  src="/Vela-demo-screenshot.jpg"
+                  alt="Vela Chrome Extension - Focus Timer and Task Manager Interface"
+                  width={1200}
+                  height={800}
+                  className="w-full h-auto"
+                  priority
+                />
               </div>
             </div>
             

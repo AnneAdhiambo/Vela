@@ -1,6 +1,7 @@
 'use client'
 
-import { Chrome, Twitter, Github, Mail } from 'lucide-react'
+import { Twitter, Github, Mail } from 'lucide-react'
+import Image from 'next/image'
 
 const footerLinks = {
   product: [
@@ -32,9 +33,13 @@ export default function Footer() {
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-                <Chrome className="w-5 h-5 text-white" />
-              </div>
+              <Image
+                src="/icon32.png"
+                alt="Vela Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 mr-3"
+              />
               <span className="text-xl font-bold">Vela</span>
             </div>
             <p className="text-gray-400 mb-6 max-w-md">
@@ -103,7 +108,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © 2024 Vela. All rights reserved.
+              © 2025 Vela. All rights reserved.
             </p>
             
             <div className="flex items-center space-x-6 mt-4 md:mt-0">
