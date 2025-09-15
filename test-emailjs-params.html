@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EmailJS Parameter Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+<body>
+    <h1>EmailJS Parameter Test</h1>
+    <p>Open browser console to see the test results.</p>
+    
+    <button onclick="testEmailJS()">Test EmailJS Parameters</button>
+    
+    <script>
+        // Initialize EmailJS with your public key
+        const EMAILJS_PUBLIC_KEY = 'your_public_key_here'; // Replace with actual key
+        const EMAILJS_SERVICE_ID = 'service_vela_mail';
+        const EMAILJS_TEMPLATE_ID = 'template_vela_magic_link';
+        
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+        
+        function testEmailJS() {
+            console.log('🧪 Testing EmailJS Parameters...');
+            
+            const testEmail = 'test@example.com';
+            const testMagicLink = 'https://example.com?token=test123';
+            
+            // These parameters match your template exactly
+            const templateParams = {
+                to_name: testEmail.split('@')[0],
+                magic_link: testMagicLink,
+                expiry_minutes: '15',
+                to_email: testEmail,
+                email: testEmail
+            };
+            
+            console.log('📋 Template Parameters:', templateParams);
+            console.log('🔧 EmailJS Config:', {
+                serviceId: EMAILJS_SERVICE_ID,
+                templateId: EMAILJS_TEMPLATE_ID,
+                publicKey: EMAILJS_PUBLIC_KEY ? 'Set' : 'Missing'
+            });
+            
+            // Test the email sending (comment out to avoid actually sending)
+            /*
+            emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+                .then(function(response) {
+                    console.log('✅ SUCCESS!', response.status, response.text);
+                }, function(error) {
+                    console.log('❌ FAILED...', error);
+                });
+            */
+            
+            console.log('💡 To actually test sending, uncomment the emailjs.send() call above');
+        }
+    </script>
+</body>
+</html>
