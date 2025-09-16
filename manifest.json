@@ -9,14 +9,32 @@
     "notifications",
     "identity"
   ],
+  "oauth2": {
+    "client_id": "3d034acf7d4345278203a3136a5fddf1",
+    "scopes": [
+      "streaming",
+      "user-read-email",
+      "user-read-private",
+      "user-read-playback-state",
+      "user-modify-playback-state",
+      "playlist-read-private",
+      "playlist-read-collaborative"
+    ]
+  },
   "host_permissions": [
     "https://api.spotify.com/*"
   ],
+  "externally_connectable": {
+    "matches": [
+      "http://127.0.0.1:3001/*",
+      "http://localhost:3001/*"
+    ]
+  },
   "chrome_url_overrides": {
     "newtab": "index.html"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background/background.ts"
   },
   "action": {
     "default_popup": "popup.html",
@@ -27,13 +45,5 @@
     "32": "icons/icon-32.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
-  },
-  "oauth2": {
-    "client_id": "YOUR_SPOTIFY_CLIENT_ID",
-    "scopes": [
-      "user-read-playback-state",
-      "user-modify-playback-state",
-      "user-read-currently-playing"
-    ]
   }
 }

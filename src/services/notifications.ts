@@ -166,7 +166,8 @@ export class NotificationService {
    */
   async clear(id: string): Promise<boolean> {
     try {
-      return chrome.notifications.clear(id);
+      chrome.notifications.clear(id);
+      return true;
     } catch (error) {
       console.error("Error clearing notification:", error);
       return false;
@@ -178,13 +179,14 @@ export class NotificationService {
    */
   async clearAll(): Promise<void> {
     try {
-      const notifications = chrome.notifications.getAll();
-      if (notifications) {
-        const clearPromises = Object.keys(notifications).map((id) =>
-          this.clear(id)
-        );
-        await Promise.all(clearPromises);
-      }
+      chrome.notifications.getAll((notifications) => {
+        if (notifications) {
+          const clearPromises = Object.keys(notifications).map((id) =>
+            this.clear(id)
+          );
+          Promise.all(clearPromises);
+        }
+      });
     } catch (error) {
       console.error("Error clearing all notifications:", error);
     }

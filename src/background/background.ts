@@ -50,6 +50,17 @@ class TimerManager {
     // Update daily stats
     await this.updateSessionStats('started')
     
+    // Notify all tabs that timer started
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        if (tab.id) {
+          chrome.tabs.sendMessage(tab.id, { type: 'TIMER_STARTED' }).catch(() => {
+            // Ignore errors for tabs that don't have the content script
+          })
+        }
+      })
+    })
+    
     console.log('Timer session started successfully')
   }
   
@@ -139,6 +150,30 @@ class TimerManager {
   async stopSession(): Promise<void> {
     console.log('Stopping timer session')
     
+    // Get current session and timer state before clearing it
+    const result = await chrome.storage.local.get(['currentSession', 'timerState'])
+    const currentSession = result.currentSession
+    const timerState = result.timerState
+    
+    // Calculate actual elapsed time for stopped session
+    if (currentSession && timerState) {
+      const now = Date.now()
+      const sessionStartTime = new Date(currentSession.startTime).getTime()
+      const actualElapsedTime = Math.floor((now - sessionStartTime) / 1000) // Convert to seconds
+      
+      // Update the session with actual elapsed time
+      const updatedSession = {
+        ...currentSession,
+        actualDuration: actualElapsedTime,
+        endTime: new Date()
+      }
+      
+      console.log('📊 Stopped session - actual elapsed time:', actualElapsedTime, 'seconds')
+      
+      // Update stats for stopped session with actual time
+      await this.updateSessionStats('stopped', updatedSession)
+    }
+    
     // Clear all timer alarms
     await this.clearAllTimerAlarms()
     
@@ -146,6 +181,17 @@ class TimerManager {
     await chrome.storage.local.set({
       currentSession: null,
       timerState: null
+    })
+    
+    // Notify all tabs that timer stopped
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        if (tab.id) {
+          chrome.tabs.sendMessage(tab.id, { type: 'TIMER_STOPPED' }).catch(() => {
+            // Ignore errors for tabs that don't have the content script
+          })
+        }
+      })
     })
     
     console.log('Timer session stopped successfully')
@@ -159,8 +205,10 @@ class TimerManager {
     plannedDuration: number // seconds
   }> {
     const result = await chrome.storage.local.get(['currentSession', 'timerState'])
+    console.log('🔄 Background getTimerState - storage result:', result)
     
     if (!result.currentSession || !result.timerState) {
+      console.log('🔄 No active session found in storage')
       return {
         isActive: false,
         isPaused: false,
@@ -174,7 +222,7 @@ class TimerManager {
       return {
         isActive: true,
         isPaused: true,
-        timeRemaining: Math.ceil(result.timerState.remainingTime / 1000),
+        timeRemaining: Math.ceil((result.timerState.remainingTime || 0) / 1000),
         session: result.currentSession,
         plannedDuration: Math.ceil(result.timerState.plannedDuration / 1000)
       }
@@ -182,8 +230,11 @@ class TimerManager {
     
     // Calculate remaining time for active session
     const alarm = await chrome.alarms.get(TimerManager.TIMER_ALARM_NAME)
+    console.log('🔄 Background getTimerState - alarm:', alarm)
+    
     if (!alarm) {
       // Session might have completed, clean up
+      console.log('🔄 No alarm found, cleaning up session')
       await this.stopSession()
       return {
         isActive: false,
@@ -196,6 +247,7 @@ class TimerManager {
     
     const now = Date.now()
     const timeRemaining = Math.max(0, alarm.scheduledTime - now)
+    console.log('🔄 Background getTimerState - timeRemaining:', Math.ceil(timeRemaining / 1000), 'seconds')
     
     return {
       isActive: true,
@@ -295,8 +347,12 @@ class TimerManager {
       return
     }
     
-    const session = result.currentSession
     const timerState = result.timerState
+    
+    if (!timerState) {
+      console.log('No timer state to recover')
+      return
+    }
     
     // Check if session should have completed while offline
     const now = Date.now()
@@ -334,7 +390,7 @@ class TimerManager {
     await chrome.alarms.clear(TimerManager.PAUSE_ALARM_NAME)
   }
   
-  private async updateSessionStats(action: 'started' | 'completed', session?: any): Promise<void> {
+  private async updateSessionStats(action: 'started' | 'completed' | 'stopped', session?: any): Promise<void> {
     const result = await chrome.storage.local.get(['todaysStats'])
     const today = new Date().toISOString().split('T')[0]
     
@@ -342,6 +398,8 @@ class TimerManager {
       date: today,
       sessionsStarted: 0,
       sessionsCompleted: 0,
+      sessionsStopped: 0,
+      totalSessions: 0,
       totalFocusTime: 0,
       tasksCreated: 0,
       tasksCompleted: 0,
@@ -354,6 +412,8 @@ class TimerManager {
         date: today,
         sessionsStarted: 0,
         sessionsCompleted: 0,
+        sessionsStopped: 0,
+        totalSessions: 0,
         totalFocusTime: 0,
         tasksCreated: 0,
         tasksCompleted: 0,
@@ -363,9 +423,17 @@ class TimerManager {
     
     if (action === 'started') {
       stats.sessionsStarted += 1
+      stats.totalSessions += 1
     } else if (action === 'completed' && session) {
       stats.sessionsCompleted += 1
-      stats.totalFocusTime += session.actualDuration || session.plannedDuration
+      const sessionDuration = session.actualDuration || session.plannedDuration
+      stats.totalFocusTime += sessionDuration
+    } else if (action === 'stopped' && session) {
+      stats.sessionsStopped += 1
+      // Use actual duration if available, otherwise calculate time spent
+      const timeSpent = session.actualDuration || Math.floor((Date.now() - new Date(session.startTime).getTime()) / 1000)
+      stats.totalFocusTime += timeSpent
+      console.log('📊 Added stopped session time to stats:', timeSpent, 'seconds')
     }
     
     await chrome.storage.local.set({ todaysStats: stats })
@@ -464,7 +532,8 @@ class BackgroundNotificationService {
 
   async clear(id: string): Promise<boolean> {
     try {
-      return await chrome.notifications.clear(id)
+      await chrome.notifications.clear(id)
+      return true
     } catch (error) {
       console.error('Error clearing notification:', error)
       return false
@@ -647,6 +716,63 @@ async function isNotificationsEnabled(): Promise<boolean> {
   return result.userPreferences?.notificationsEnabled ?? true
 }
 
+// Track session statistics
+async function trackSession(sessionData: {
+  completed: boolean
+  duration: number
+  timestamp: number
+}): Promise<void> {
+  try {
+    const result = await chrome.storage.local.get(['sessionStats'])
+    const stats = result.sessionStats || {
+      totalSessions: 0,
+      completedSessions: 0,
+      uncompletedSessions: 0,
+      totalFocusTime: 0,
+      sessions: []
+    }
+    
+    // Update statistics
+    stats.totalSessions += 1
+    if (sessionData.completed) {
+      stats.completedSessions += 1
+    } else {
+      stats.uncompletedSessions += 1
+    }
+    stats.totalFocusTime += sessionData.duration
+    
+    // Add session to history
+    stats.sessions.push({
+      id: Date.now().toString(),
+      completed: sessionData.completed,
+      duration: sessionData.duration,
+      timestamp: sessionData.timestamp,
+      date: new Date(sessionData.timestamp).toISOString().split('T')[0]
+    })
+    
+    // Keep only last 100 sessions
+    if (stats.sessions.length > 100) {
+      stats.sessions = stats.sessions.slice(-100)
+    }
+    
+    await chrome.storage.local.set({ sessionStats: stats })
+    console.log('📊 Session tracked:', sessionData)
+    
+    // Notify UI that stats have been updated
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        if (tab.id) {
+          chrome.tabs.sendMessage(tab.id, { type: 'SESSION_TRACKED' }).catch(() => {
+            // Ignore errors for tabs that don't have the content script
+          })
+        }
+      })
+    })
+  } catch (error) {
+    console.error('Failed to track session:', error)
+  }
+}
+
 // Handle notification clicks
 chrome.notifications.onClicked.addListener(async (notificationId) => {
   console.log('Notification clicked:', notificationId)
@@ -718,8 +844,64 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
   }
 })
 
+// Handle external messages from auth callback page
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  console.log('🔗 External message received:', message, 'from:', sender.origin)
+  
+  // Only accept messages from our auth server
+  if (sender.origin !== 'http://127.0.0.1:3001' && sender.origin !== 'http://localhost:3001') {
+    console.log('🚫 Rejecting message from unauthorized origin:', sender.origin)
+    sendResponse({ error: 'Unauthorized origin' })
+    return
+  }
+  
+  if (message.type === 'MAGIC_LINK_AUTH') {
+    console.log('🔗 Processing magic link authentication...')
+    
+    const { sessionToken, user } = message
+    
+    if (!sessionToken || !user) {
+      console.error('❌ Missing session token or user data')
+      sendResponse({ error: 'Missing authentication data' })
+      return
+    }
+    
+    // Store the session token and user data
+    chrome.storage.local.set({
+      vela_auth_token: sessionToken,
+      vela_user: user,
+      vela_auth_pending: false // Clear any pending flag
+    }).then(() => {
+      console.log('✅ Magic link authentication data stored successfully')
+      
+      // Notify all extension tabs that user is now authenticated
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+          if (tab.id) {
+            chrome.tabs.sendMessage(tab.id, {
+              type: 'MAGIC_LINK_AUTH_SUCCESS',
+              user: user,
+              token: sessionToken
+            }).catch(() => {
+              // Ignore errors for tabs that don't have the content script
+            })
+          }
+        })
+      })
+      
+      sendResponse({ success: true })
+    }).catch(error => {
+      console.error('❌ Error storing magic link auth data:', error)
+      sendResponse({ error: 'Failed to store authentication data' })
+    })
+  } else {
+    console.log('⚠️ Unknown external message type:', message.type)
+    sendResponse({ error: 'Unknown message type' })
+  }
+})
+
 // Handle messages from UI
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   console.log('Background received message:', message)
   
   switch (message.type) {
@@ -755,6 +937,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .catch(error => sendResponse({ error: error.message }))
       return true
       
+    case 'TRACK_SESSION':
+      trackSession(message.sessionData).then(sendResponse)
+        .catch(error => sendResponse({ error: error.message }))
+      return true
+      
     case 'SHOW_NOTIFICATION':
       showNotification(message.id, message.options).then(sendResponse)
       return true
@@ -769,6 +956,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       
     case 'UPDATE_NOTIFICATION_PREFERENCES':
       updateNotificationPreferences(message.preferences).then(sendResponse)
+      return true
+      
+    case 'SPOTIFY_OAUTH':
+      handleSpotifyOAuth().then(sendResponse)
+      return true
+      
+    case 'GET_SPOTIFY_TOKENS':
+      getSpotifyTokens().then(tokens => {
+        console.log('🎵 Background sending response:', tokens ? 'tokens found' : 'no tokens')
+        if (tokens) {
+          sendResponse(tokens)
+        } else {
+          sendResponse({ access_token: null, refresh_token: null })
+        }
+      }).catch(error => {
+        console.error('Error getting Spotify tokens:', error)
+        sendResponse({ access_token: null, refresh_token: null })
+      })
+      return true
+      
+    case 'DISCONNECT_SPOTIFY':
+      disconnectSpotify().then(sendResponse)
+      return true
+      
+    case 'OPEN_AUTHENTICATED_TAB':
+      console.log('🚀 Opening authenticated tab with user:', message.user)
+      focusExtensionTab().then(() => {
+        sendResponse({ success: true })
+      }).catch(error => {
+        console.error('Error opening authenticated tab:', error)
+        sendResponse({ success: false, error: error.message })
+      })
       return true
       
     default:
@@ -834,6 +1053,232 @@ async function updateNotificationPreferences(preferences: any) {
     return { success: true }
   } catch (error) {
     console.error('Error updating notification preferences:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+// Spotify OAuth functionality
+const SPOTIFY_CLIENT_ID = '3d034acf7d4345278203a3136a5fddf1'
+const SPOTIFY_CLIENT_SECRET = 'cb1b313cd5484a9f9436ed57e4e68086'
+const PROXY_URL = 'http://127.0.0.1:3001'
+
+// Handle Spotify OAuth flow
+async function handleSpotifyOAuth() {
+  try {
+    console.log('🎵 Starting Spotify OAuth flow...')
+    
+    // Get the redirect URI for this extension
+    const redirectUri = chrome.identity.getRedirectURL('callback')
+    console.log('Redirect URI:', redirectUri)
+    
+    // Build Spotify authorization URL with required scopes
+    const authUrl = `https://accounts.spotify.com/authorize?` + new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID,
+      response_type: 'code',
+      redirect_uri: redirectUri,
+      scope: 'user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-read-private playlist-read-collaborative',
+      show_dialog: 'true'
+    }).toString()
+    
+    console.log('Auth URL:', authUrl)
+    
+    // Launch OAuth flow with proper error handling
+    return new Promise((resolve) => {
+      chrome.identity.launchWebAuthFlow({
+        url: authUrl,
+        interactive: true
+      }, async (responseUrl) => {
+        try {
+          if (chrome.runtime.lastError) {
+            console.error('Chrome runtime error:', chrome.runtime.lastError)
+            resolve({ success: false, error: chrome.runtime.lastError.message })
+            return
+          }
+          
+          if (!responseUrl) {
+            console.error('No response URL received')
+            resolve({ success: false, error: 'No response URL received from OAuth flow' })
+            return
+          }
+          
+          console.log('OAuth response URL:', responseUrl)
+          
+          // Extract authorization code from response URL
+          const url = new URL(responseUrl)
+          const code = url.searchParams.get('code')
+          const error = url.searchParams.get('error')
+          
+          if (error) {
+            console.error('Spotify OAuth error:', error)
+            resolve({ success: false, error: `Spotify OAuth error: ${error}` })
+            return
+          }
+          
+          if (!code) {
+            console.error('No authorization code received')
+            resolve({ success: false, error: 'No authorization code received' })
+            return
+          }
+          
+          console.log('Authorization code received:', code.substring(0, 10) + '...')
+          
+          // Exchange code for tokens via proxy
+          const tokenResponse = await fetch(`${PROXY_URL}/api/spotify/token`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              code: code,
+              redirect_uri: redirectUri
+            })
+          })
+          
+          if (!tokenResponse.ok) {
+            const errorData = await tokenResponse.json()
+            console.error('Token exchange failed:', errorData)
+            resolve({ success: false, error: `Token exchange failed: ${errorData.error || 'Unknown error'}` })
+            return
+          }
+          
+          const tokens = await tokenResponse.json()
+          console.log('✅ Spotify tokens received:', {
+            access_token: tokens.access_token ? '***' + tokens.access_token.slice(-4) : 'none',
+            refresh_token: tokens.refresh_token ? '***' + tokens.refresh_token.slice(-4) : 'none',
+            expires_in: tokens.expires_in
+          })
+          
+          // Store tokens in Chrome storage
+          await chrome.storage.local.set({
+            spotify_access_token: tokens.access_token,
+            spotify_refresh_token: tokens.refresh_token,
+            spotify_expires_at: Date.now() + (tokens.expires_in * 1000),
+            spotify_token_type: tokens.token_type,
+            spotify_scope: tokens.scope
+          })
+          
+          console.log('✅ Spotify tokens stored successfully')
+          
+          // Notify all tabs that Spotify is connected
+          chrome.tabs.query({}, (tabs) => {
+            tabs.forEach(tab => {
+              if (tab.id) {
+                chrome.tabs.sendMessage(tab.id, {
+                  type: 'SPOTIFY_AUTH_SUCCESS',
+                  tokens: tokens
+                }).catch(() => {
+                  // Ignore errors for tabs that don't have our content script
+                })
+              }
+            })
+          })
+          
+          resolve({ success: true, tokens })
+          
+        } catch (error) {
+          console.error('Error in OAuth callback:', error)
+          resolve({ success: false, error: error instanceof Error ? error.message : 'Unknown error' })
+        }
+      })
+    })
+    
+  } catch (error) {
+    console.error('❌ Spotify OAuth error:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+// Get Spotify tokens
+async function getSpotifyTokens() {
+  try {
+    console.log('🎵 Getting Spotify tokens from storage...')
+    const result = await chrome.storage.local.get([
+      'spotify_access_token',
+      'spotify_refresh_token',
+      'spotify_expires_at'
+    ])
+    
+    console.log('🎵 Storage result:', {
+      hasAccessToken: !!result.spotify_access_token,
+      hasRefreshToken: !!result.spotify_refresh_token,
+      expiresAt: result.spotify_expires_at
+    })
+    
+    if (!result.spotify_access_token) {
+      console.log('🎵 No access token found in storage')
+      return null
+    }
+    
+    // Check if token is expired
+    const now = Date.now()
+    const expiresAt = result.spotify_expires_at || 0
+    
+    if (now >= expiresAt - 60000) { // Refresh if expires in 1 minute
+      console.log('🔄 Spotify token expired, attempting refresh...')
+      return await refreshSpotifyToken(result.spotify_refresh_token)
+    }
+    
+    return {
+      access_token: result.spotify_access_token,
+      refresh_token: result.spotify_refresh_token,
+      expires_at: expiresAt
+    }
+  } catch (error) {
+    console.error('Error getting Spotify tokens:', error)
+    return null
+  }
+}
+
+// Refresh Spotify token
+async function refreshSpotifyToken(refreshToken: string) {
+  try {
+    const response = await fetch(`${PROXY_URL}/api/spotify/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        refresh_token: refreshToken
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error('Token refresh failed')
+    }
+    
+    const tokens = await response.json()
+    
+    // Store new tokens
+    await chrome.storage.local.set({
+      spotify_access_token: tokens.access_token,
+      spotify_refresh_token: tokens.refresh_token || refreshToken,
+      spotify_expires_at: Date.now() + (tokens.expires_in * 1000)
+    })
+    
+    console.log('✅ Spotify token refreshed successfully')
+    return tokens
+    
+  } catch (error) {
+    console.error('Error refreshing Spotify token:', error)
+    return null
+  }
+}
+
+// Disconnect Spotify
+async function disconnectSpotify() {
+  try {
+    await chrome.storage.local.remove([
+      'spotify_access_token',
+      'spotify_refresh_token',
+      'spotify_expires_at',
+      'spotify_token_type',
+      'spotify_scope'
+    ])
+    
+    console.log('✅ Spotify disconnected successfully')
+    return { success: true }
+  } catch (error) {
+    console.error('Error disconnecting Spotify:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }

@@ -1,12 +1,9 @@
 import { 
   Task, 
-  FocusSession, 
   UserProfile, 
   UserPreferences, 
   DailyStats, 
   WeeklyStats,
-  LocalStorage,
-  SyncStorage,
   ActiveSession
 } from '../types'
 import { 
@@ -64,7 +61,7 @@ export class ChromeStorageService {
       }
       return deserializedResult as T
     } catch (error) {
-      throw new StorageError(`Failed to get data from ${area} storage: ${error.message}`, 'get')
+      throw new StorageError(`Failed to get data from ${area} storage: ${error instanceof Error ? error.message : 'Unknown error'}`, 'get')
     }
   }
 
@@ -80,10 +77,11 @@ export class ChromeStorageService {
       }
       await chrome.storage[area].set(serializedData)
     } catch (error) {
-      throw new StorageError(`Failed to set data to ${area} storage: ${error.message}`, 'set')
+      throw new StorageError(`Failed to set data to ${area} storage: ${error instanceof Error ? error.message : 'Unknown error'}`, 'set')
     }
   }
 
+  // @ts-ignore - Method kept for future use
   private async removeFromStorage(
     area: 'local' | 'sync',
     keys: string | string[]
@@ -91,7 +89,7 @@ export class ChromeStorageService {
     try {
       await chrome.storage[area].remove(keys)
     } catch (error) {
-      throw new StorageError(`Failed to remove data from ${area} storage: ${error.message}`, 'remove')
+      throw new StorageError(`Failed to remove data from ${area} storage: ${error instanceof Error ? error.message : 'Unknown error'}`, 'remove')
     }
   }
 
@@ -99,7 +97,7 @@ export class ChromeStorageService {
     try {
       await chrome.storage[area].clear()
     } catch (error) {
-      throw new StorageError(`Failed to clear ${area} storage: ${error.message}`, 'clear')
+      throw new StorageError(`Failed to clear ${area} storage: ${error instanceof Error ? error.message : 'Unknown error'}`, 'clear')
     }
   }
 
@@ -116,7 +114,7 @@ export class ChromeStorageService {
         isPaused: data.currentSession.isPaused || false
       }
     } catch (error) {
-      throw new StorageError(`Failed to get current session: ${error.message}`, 'getCurrentSession')
+      throw new StorageError(`Failed to get current session: ${error instanceof Error ? error.message : 'Unknown error'}`, 'getCurrentSession')
     }
   }
 
@@ -127,7 +125,7 @@ export class ChromeStorageService {
       }
       await this.setToStorage('local', { currentSession: session })
     } catch (error) {
-      throw new StorageError(`Failed to set current session: ${error.message}`, 'setCurrentSession')
+      throw new StorageError(`Failed to set current session: ${error instanceof Error ? error.message : 'Unknown error'}`, 'setCurrentSession')
     }
   }
 
@@ -138,7 +136,7 @@ export class ChromeStorageService {
       
       return validateArray(data.todaysTasks, validateTask, 'todaysTasks')
     } catch (error) {
-      throw new StorageError(`Failed to get today's tasks: ${error.message}`, 'getTodaysTasks')
+      throw new StorageError(`Failed to get today's tasks: ${error instanceof Error ? error.message : 'Unknown error'}`, 'getTodaysTasks')
     }
   }
 
@@ -147,7 +145,7 @@ export class ChromeStorageService {
       const validatedTasks = validateArray(tasks, validateTask, 'tasks')
       await this.setToStorage('local', { todaysTasks: validatedTasks })
     } catch (error) {
-      throw new StorageError(`Failed to set today's tasks: ${error.message}`, 'setTodaysTasks')
+      throw new StorageError(`Failed to set today's tasks: ${error instanceof Error ? error.message : 'Unknown error'}`, 'setTodaysTasks')
     }
   }
 
@@ -158,7 +156,7 @@ export class ChromeStorageService {
       
       return validateDailyStats(data.todaysStats)
     } catch (error) {
-      throw new StorageError(`Failed to get today's stats: ${error.message}`, 'getTodaysStats')
+      throw new StorageError(`Failed to get today's stats: ${error instanceof Error ? error.message : 'Unknown error'}`, 'getTodaysStats')
     }
   }
 
@@ -167,7 +165,7 @@ export class ChromeStorageService {
       const validatedStats = validateDailyStats(stats)
       await this.setToStorage('local', { todaysStats: validatedStats })
     } catch (error) {
-      throw new StorageError(`Failed to set today's stats: ${error.message}`, 'setTodaysStats')
+      throw new StorageError(`Failed to set today's stats: ${error instanceof Error ? error.message : 'Unknown error'}`, 'setTodaysStats')
     }
   }
 
@@ -178,7 +176,7 @@ export class ChromeStorageService {
       
       return validateUserPreferences(data.userPreferences)
     } catch (error) {
-      throw new StorageError(`Failed to get user preferences: ${error.message}`, 'getUserPreferences')
+      throw new StorageError(`Failed to get user preferences: ${error instanceof Error ? error.message : 'Unknown error'}`, 'getUserPreferences')
     }
   }
 
@@ -189,7 +187,7 @@ export class ChromeStorageService {
       // Also sync to cloud storage
       await this.setToStorage('sync', { preferences: validatedPreferences })
     } catch (error) {
-      throw new StorageError(`Failed to set user preferences: ${error.message}`, 'setUserPreferences')
+      throw new StorageError(`Failed to set user preferences: ${error instanceof Error ? error.message : 'Unknown error'}`, 'setUserPreferences')
     }
   }
 
@@ -200,7 +198,7 @@ export class ChromeStorageService {
       
       return new Date(data.lastSync)
     } catch (error) {
-      throw new StorageError(`Failed to get last sync: ${error.message}`, 'getLastSync')
+      throw new StorageError(`Failed to get last sync: ${error instanceof Error ? error.message : 'Unknown error'}`, 'getLastSync')
     }
   }
 
@@ -208,7 +206,7 @@ export class ChromeStorageService {
     try {
       await this.setToStorage('local', { lastSync: date.toISOString() })
     } catch (error) {
-      throw new StorageError(`Failed to set last sync: ${error.message}`, 'setLastSync')
+      throw new StorageError(`Failed to set last sync: ${error instanceof Error ? error.message : 'Unknown error'}`, 'setLastSync')
     }
   } 
  // Sync storage operations (cross-device sync data)
@@ -219,7 +217,7 @@ export class ChromeStorageService {
       
       return validateUserProfile(data.userProfile)
     } catch (error) {
-      throw new StorageError(`Failed to get user profile: ${error.message}`, 'getUserProfile')
+      throw new StorageError(`Failed to get user profile: ${error instanceof Error ? error.message : 'Unknown error'}`, 'getUserProfile')
     }
   }
 
@@ -228,7 +226,7 @@ export class ChromeStorageService {
       const validatedProfile = validateUserProfile(profile)
       await this.setToStorage('sync', { userProfile: validatedProfile })
     } catch (error) {
-      throw new StorageError(`Failed to set user profile: ${error.message}`, 'setUserProfile')
+      throw new StorageError(`Failed to set user profile: ${error instanceof Error ? error.message : 'Unknown error'}`, 'setUserProfile')
     }
   }
 
@@ -239,7 +237,7 @@ export class ChromeStorageService {
       
       return validateArray(data.recentTasks, validateTask, 'recentTasks')
     } catch (error) {
-      throw new StorageError(`Failed to get recent tasks: ${error.message}`, 'getRecentTasks')
+      throw new StorageError(`Failed to get recent tasks: ${error instanceof Error ? error.message : 'Unknown error'}`, 'getRecentTasks')
     }
   }
 
@@ -250,7 +248,7 @@ export class ChromeStorageService {
       const validatedTasks = validateArray(limitedTasks, validateTask, 'tasks')
       await this.setToStorage('sync', { recentTasks: validatedTasks })
     } catch (error) {
-      throw new StorageError(`Failed to set recent tasks: ${error.message}`, 'setRecentTasks')
+      throw new StorageError(`Failed to set recent tasks: ${error instanceof Error ? error.message : 'Unknown error'}`, 'setRecentTasks')
     }
   }
 
@@ -261,7 +259,7 @@ export class ChromeStorageService {
       
       return validateArray(data.weeklyStats, validateWeeklyStats, 'weeklyStats')
     } catch (error) {
-      throw new StorageError(`Failed to get weekly stats: ${error.message}`, 'getWeeklyStats')
+      throw new StorageError(`Failed to get weekly stats: ${error instanceof Error ? error.message : 'Unknown error'}`, 'getWeeklyStats')
     }
   }
 
@@ -270,7 +268,7 @@ export class ChromeStorageService {
       const validatedStats = validateArray(stats, validateWeeklyStats, 'stats')
       await this.setToStorage('sync', { weeklyStats: validatedStats })
     } catch (error) {
-      throw new StorageError(`Failed to set weekly stats: ${error.message}`, 'setWeeklyStats')
+      throw new StorageError(`Failed to set weekly stats: ${error instanceof Error ? error.message : 'Unknown error'}`, 'setWeeklyStats')
     }
   }
 
@@ -286,7 +284,7 @@ export class ChromeStorageService {
       const updatedRecentTasks = [...recentTasks, task]
       await this.setRecentTasks(updatedRecentTasks)
     } catch (error) {
-      throw new StorageError(`Failed to add task: ${error.message}`, 'addTask')
+      throw new StorageError(`Failed to add task: ${error instanceof Error ? error.message : 'Unknown error'}`, 'addTask')
     }
   }
 
@@ -313,7 +311,7 @@ export class ChromeStorageService {
         await this.setRecentTasks(recentTasks)
       }
     } catch (error) {
-      throw new StorageError(`Failed to update task: ${error.message}`, 'updateTask')
+      throw new StorageError(`Failed to update task: ${error instanceof Error ? error.message : 'Unknown error'}`, 'updateTask')
     }
   }
 
@@ -328,7 +326,7 @@ export class ChromeStorageService {
       
       await this.setTodaysTasks(filteredTasks)
     } catch (error) {
-      throw new StorageError(`Failed to delete task: ${error.message}`, 'deleteTask')
+      throw new StorageError(`Failed to delete task: ${error instanceof Error ? error.message : 'Unknown error'}`, 'deleteTask')
     }
   }
 
@@ -352,7 +350,7 @@ export class ChromeStorageService {
       
       await this.setTodaysTasks(reorderedTasks)
     } catch (error) {
-      throw new StorageError(`Failed to reorder tasks: ${error.message}`, 'reorderTasks')
+      throw new StorageError(`Failed to reorder tasks: ${error instanceof Error ? error.message : 'Unknown error'}`, 'reorderTasks')
     }
   }
 
@@ -365,6 +363,8 @@ export class ChromeStorageService {
         date: today,
         sessionsStarted: 0,
         sessionsCompleted: 0,
+        sessionsStopped: 0,
+        totalSessions: 0,
         totalFocusTime: 0,
         tasksCreated: 0,
         tasksCompleted: 0,
@@ -375,12 +375,12 @@ export class ChromeStorageService {
       
       await this.setTodaysStats(updatedStats)
     } catch (error) {
-      throw new StorageError(`Failed to update daily stats: ${error.message}`, 'updateDailyStats')
+      throw new StorageError(`Failed to update daily stats: ${error instanceof Error ? error.message : 'Unknown error'}`, 'updateDailyStats')
     }
   }
 
   // Storage event listeners for cross-tab synchronization
-  addStorageListener(callback: (changes: chrome.storage.StorageChange, areaName: string) => void): void {
+  addStorageListener(callback: (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void): void {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener(callback)
     }
@@ -448,14 +448,14 @@ export class ChromeStorageService {
   // Storage quota and usage information
   async getStorageUsage(area: 'local' | 'sync' = 'local'): Promise<{ bytesInUse: number; quota?: number }> {
     try {
-      if (chrome.storage[area].getBytesInUse) {
+      if (chrome.storage[area].getBytesInUse && typeof chrome.storage[area].getBytesInUse === 'function') {
         const bytesInUse = await chrome.storage[area].getBytesInUse()
         const quota = area === 'sync' ? chrome.storage.sync.QUOTA_BYTES : undefined
         return { bytesInUse, quota }
       }
       return { bytesInUse: 0 }
     } catch (error) {
-      throw new StorageError(`Failed to get storage usage: ${error.message}`, 'getStorageUsage')
+      throw new StorageError(`Failed to get storage usage: ${error instanceof Error ? error.message : 'Unknown error'}`, 'getStorageUsage')
     }
   }
 
@@ -465,7 +465,7 @@ export class ChromeStorageService {
       await this.clearStorage('local')
       await this.clearStorage('sync')
     } catch (error) {
-      throw new StorageError(`Failed to clear all data: ${error.message}`, 'clearAllData')
+      throw new StorageError(`Failed to clear all data: ${error instanceof Error ? error.message : 'Unknown error'}`, 'clearAllData')
     }
   }
 
@@ -476,7 +476,7 @@ export class ChromeStorageService {
       const syncData = await this.getFromStorage('sync')
       return { local: localData, sync: syncData }
     } catch (error) {
-      throw new StorageError(`Failed to export data: ${error.message}`, 'exportData')
+      throw new StorageError(`Failed to export data: ${error instanceof Error ? error.message : 'Unknown error'}`, 'exportData')
     }
   }
 
@@ -489,7 +489,7 @@ export class ChromeStorageService {
         await this.setToStorage('sync', data.sync)
       }
     } catch (error) {
-      throw new StorageError(`Failed to import data: ${error.message}`, 'importData')
+      throw new StorageError(`Failed to import data: ${error instanceof Error ? error.message : 'Unknown error'}`, 'importData')
     }
   }
 }
@@ -557,7 +557,7 @@ export class DataSerializer {
       const parsed = JSON.parse(compressedData)
       return DataSerializer.deserialize(parsed)
     } catch (error) {
-      throw new StorageError(`Failed to decompress data: ${error.message}`, 'decompress')
+      throw new StorageError(`Failed to decompress data: ${error instanceof Error ? error.message : 'Unknown error'}`, 'decompress')
     }
   }
 }
@@ -582,6 +582,8 @@ export const createDefaultDailyStats = (date?: string): DailyStats => ({
   date: date || new Date().toISOString().split('T')[0],
   sessionsStarted: 0,
   sessionsCompleted: 0,
+  sessionsStopped: 0,
+  totalSessions: 0,
   totalFocusTime: 0,
   tasksCreated: 0,
   tasksCompleted: 0,

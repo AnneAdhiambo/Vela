@@ -1,18 +1,19 @@
 // Spotify Web API service
 // NOTE: In a production app, the client secret should be handled by a backend server
 // For development/demo purposes, we're including it here but this is not secure for production
-const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID || '3d034acf7d4345278203a3136a5fddf1'
-const CLIENT_SECRET = import.meta.env.VITE_SPOTIFY_CLIENT_SECRET || 'cb1b313cd5484a9f9436ed57e4e68086'
-const REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:3000'
-const SCOPES = [
-  'streaming',
-  'user-read-email',
-  'user-read-private',
-  'user-read-playback-state',
-  'user-modify-playback-state',
-  'playlist-read-private',
-  'playlist-read-collaborative'
-].join(' ')
+const CLIENT_ID = (import.meta as any).env?.VITE_SPOTIFY_CLIENT_ID || '3d034acf7d4345278203a3136a5fddf1'
+const CLIENT_SECRET = (import.meta as any).env?.VITE_SPOTIFY_CLIENT_SECRET || 'cb1b313cd5484a9f9436ed57e4e68086'
+// const REDIRECT_URI = (import.meta as any).env?.VITE_SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:3000'
+const PROXY_URL = 'http://127.0.0.1:3001' // OAuth proxy URL
+// const SCOPES = [
+//   'streaming',
+//   'user-read-email',
+//   'user-read-private',
+//   'user-read-playback-state',
+//   'user-modify-playback-state',
+//   'playlist-read-private',
+//   'playlist-read-collaborative'
+// ].join(' ')
 
 export interface SpotifyPlaylist {
   id: string
@@ -75,46 +76,64 @@ export interface SpotifyShow {
 class SpotifyService {
   private accessToken: string | null = null
   private refreshToken: string | null = null
+  private isCheckingAuth: boolean = false
 
   constructor() {
-    // Load tokens from localStorage
-    this.accessToken = localStorage.getItem('spotify_access_token')
-    this.refreshToken = localStorage.getItem('spotify_refresh_token')
+    // Load tokens from Chrome storage
+    this.loadTokensFromStorage()
   }
 
-  // Generate Spotify authorization URL
-  getAuthUrl(): string {
-    const params = new URLSearchParams({
-      client_id: CLIENT_ID,
-      response_type: 'code',
-      redirect_uri: REDIRECT_URI,
-      scope: SCOPES,
-      show_dialog: 'true'
-    })
-    
-    return `https://accounts.spotify.com/authorize?${params.toString()}`
+  // Public method to check if tokens are loaded
+  hasTokens(): boolean {
+    return !!(this.accessToken && this.refreshToken)
+  }
+
+  private async loadTokensFromStorage() {
+    try {
+      const result = await chrome.storage.local.get([
+        'spotify_access_token',
+        'spotify_refresh_token'
+      ])
+      this.accessToken = result.spotify_access_token || null
+      this.refreshToken = result.spotify_refresh_token || null
+    } catch (error) {
+      console.error('Error loading tokens from Chrome storage:', error)
+    }
+  }
+
+  // Connect to Spotify using Chrome extension OAuth
+  async connect(): Promise<boolean> {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'SPOTIFY_OAUTH' })
+      if (response.success) {
+        await this.loadTokensFromStorage()
+        return true
+      } else {
+        console.error('Spotify OAuth failed:', response.error)
+        return false
+      }
+    } catch (error) {
+      console.error('Error connecting to Spotify:', error)
+      return false
+    }
   }
 
   // Exchange authorization code for access token
   async exchangeCodeForToken(code: string): Promise<boolean> {
     try {
-      console.log('Exchanging code for token with:', {
-        client_id: CLIENT_ID,
-        redirect_uri: REDIRECT_URI,
+      console.log('Exchanging code for token via proxy:', {
+        proxy_url: PROXY_URL,
         code: code.substring(0, 10) + '...' // Log partial code for debugging
       })
 
-      const response = await fetch('https://accounts.spotify.com/api/token', {
+      const response = await fetch(`${PROXY_URL}/api/spotify/token`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code,
-          redirect_uri: REDIRECT_URI,
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET,
+        body: JSON.stringify({
+          code: code,
+          redirect_uri: `${PROXY_URL}/callback`
         }),
       })
 
@@ -143,8 +162,37 @@ class SpotifyService {
   }
 
   // Check if user is authenticated
-  isAuthenticated(): boolean {
-    return !!this.accessToken
+  async isAuthenticated(): Promise<boolean> {
+    // Prevent multiple simultaneous requests
+    if (this.isCheckingAuth) {
+      console.log('🎵 Authentication check already in progress, skipping...')
+      return false
+    }
+    
+    this.isCheckingAuth = true
+    
+    try {
+      console.log('🎵 Checking Spotify authentication...')
+      const response = await chrome.runtime.sendMessage({ type: 'GET_SPOTIFY_TOKENS' })
+      console.log('🎵 Spotify token response:', response)
+      console.log('🎵 Response type:', typeof response)
+      console.log('🎵 Response keys:', response ? Object.keys(response) : 'null')
+      console.log('🎵 Full response object:', JSON.stringify(response, null, 2))
+      
+      if (response && response.access_token && response.access_token !== null) {
+        this.accessToken = response.access_token
+        this.refreshToken = response.refresh_token
+        console.log('🎵 Spotify authenticated successfully')
+        return true
+      }
+      console.log('🎵 Spotify not authenticated - no valid tokens')
+      return false
+    } catch (error) {
+      console.error('🎵 Error checking Spotify authentication:', error)
+      return false
+    } finally {
+      this.isCheckingAuth = false
+    }
   }
 
   // Make authenticated API request
@@ -295,7 +343,9 @@ class SpotifyService {
           console.log(`No active device found, transferring to: ${devices[0].name}`)
           
           // Transfer playback to this device first
-          await this.transferPlayback(targetDeviceId)
+          if (targetDeviceId) {
+            await this.transferPlayback(targetDeviceId)
+          }
           // Wait a moment for the transfer to complete
           await new Promise(resolve => setTimeout(resolve, 1000))
         }
@@ -338,6 +388,68 @@ class SpotifyService {
       return true
     } catch (error) {
       console.error('❌ Error starting playlist playback:', error)
+      throw error
+    }
+  }
+
+  // Start playback of an album
+  async playAlbum(albumId: string, deviceId?: string): Promise<boolean> {
+    try {
+      console.log(`🎵 Attempting to play album: ${albumId}`)
+      
+      // First, check if we have any available devices
+      const devices = await this.getDevices()
+      console.log('Available devices:', devices)
+      
+      if (devices.length === 0) {
+        throw new Error('No Spotify devices found. Please open Spotify on a device (phone, computer, etc.) first.')
+      }
+
+      // Find an active device or use the first available one
+      let targetDeviceId = deviceId
+      if (!targetDeviceId) {
+        const activeDevice = devices.find(d => d.is_active)
+        if (activeDevice) {
+          targetDeviceId = activeDevice.id
+        } else {
+          targetDeviceId = devices[0].id
+        }
+      }
+
+      console.log(`Using device: ${targetDeviceId}`)
+
+      const body: any = {
+        context_uri: `spotify:album:${albumId}`,
+      }
+
+      let endpoint = '/me/player/play'
+      if (targetDeviceId) {
+        endpoint += `?device_id=${targetDeviceId}`
+      }
+
+      console.log(`Making play request to: ${endpoint}`)
+      const response = await fetch(`https://api.spotify.com/v1${endpoint}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      })
+
+      if (response.status === 404) {
+        throw new Error('No active device found. Please open Spotify on a device first.')
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(`Spotify API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`)
+      }
+
+      console.log('✅ Successfully started album playback')
+      return true
+    } catch (error) {
+      console.error('❌ Error starting album playback:', error)
       throw error
     }
   }
@@ -474,12 +586,25 @@ class SpotifyService {
     }
   }
 
+  // Set tokens manually (for manual auth)
+  setTokens(accessToken: string, refreshToken: string): void {
+    this.accessToken = accessToken
+    this.refreshToken = refreshToken
+    localStorage.setItem('spotify_access_token', accessToken)
+    if (refreshToken) {
+      localStorage.setItem('spotify_refresh_token', refreshToken)
+    }
+  }
+
   // Disconnect (clear tokens)
-  disconnect(): void {
+  async disconnect(): Promise<void> {
+    try {
+      await chrome.runtime.sendMessage({ type: 'DISCONNECT_SPOTIFY' })
     this.accessToken = null
     this.refreshToken = null
-    localStorage.removeItem('spotify_access_token')
-    localStorage.removeItem('spotify_refresh_token')
+    } catch (error) {
+      console.error('Error disconnecting from Spotify:', error)
+    }
   }
 }
 

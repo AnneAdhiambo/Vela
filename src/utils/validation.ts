@@ -169,12 +169,14 @@ export const validateUserPreferences = (prefs: any): UserPreferences => {
 
   return {
     theme: prefs.theme,
+    accentColor: prefs.accentColor || 'blue',
     defaultSessionLength: prefs.defaultSessionLength,
     defaultBreakLength: prefs.defaultBreakLength,
     skipBreaks: prefs.skipBreaks,
     notificationsEnabled: prefs.notificationsEnabled,
     soundEnabled: prefs.soundEnabled,
-    spotifyConnected: prefs.spotifyConnected
+    spotifyConnected: prefs.spotifyConnected,
+    motivationalQuotes: prefs.motivationalQuotes !== undefined ? prefs.motivationalQuotes : true
   }
 }
 
@@ -214,6 +216,7 @@ export const validateUserProfile = (profile: any): UserProfile => {
     id: profile.id,
     email: profile.email,
     displayName: profile.displayName,
+    isAuthenticated: profile.isAuthenticated !== undefined ? profile.isAuthenticated : true,
     preferences: validatedPreferences,
     createdAt: profile.createdAt,
     lastActiveAt: profile.lastActiveAt
@@ -269,6 +272,8 @@ export const validateDailyStats = (stats: any): DailyStats => {
     date: stats.date,
     sessionsStarted: stats.sessionsStarted,
     sessionsCompleted: stats.sessionsCompleted,
+    sessionsStopped: stats.sessionsStopped || 0,
+    totalSessions: stats.totalSessions || 0,
     totalFocusTime: stats.totalFocusTime,
     tasksCreated: stats.tasksCreated,
     tasksCompleted: stats.tasksCompleted,
@@ -298,7 +303,7 @@ export const validateWeeklyStats = (stats: any): WeeklyStats => {
     try {
       return validateDailyStats(daily)
     } catch (error) {
-      throw new ValidationError(`Invalid daily stats at index ${index}: ${error.message}`, 'dailyStats')
+      throw new ValidationError(`Invalid daily stats at index ${index}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'dailyStats')
     }
   })
 
@@ -365,36 +370,30 @@ export const validateSpotifyTrack = (track: any): SpotifyTrack => {
     throw new ValidationError('SpotifyTrack must be an object')
   }
 
+  if (!isValidString(track.id, 1)) {
+    throw new ValidationError('Track id must be a non-empty string', 'id')
+  }
+
   if (!isValidString(track.name, 1)) {
     throw new ValidationError('Track name must be a non-empty string', 'name')
   }
 
-  if (!isValidString(track.artist, 1)) {
-    throw new ValidationError('Track artist must be a non-empty string', 'artist')
+  if (!isValidString(track.album?.name, 1)) {
+    throw new ValidationError('Track album name must be a non-empty string', 'album')
   }
 
-  if (!isValidString(track.album, 1)) {
-    throw new ValidationError('Track album must be a non-empty string', 'album')
-  }
-
-  if (!isValidNumber(track.duration, 0)) {
+  if (!isValidNumber(track.duration_ms, 0)) {
     throw new ValidationError('Track duration must be a non-negative number', 'duration')
   }
 
-  if (!isValidNumber(track.progress, 0)) {
-    throw new ValidationError('Track progress must be a non-negative number', 'progress')
-  }
-
-  if (track.progress > track.duration) {
-    throw new ValidationError('Track progress cannot exceed duration')
-  }
 
   return {
+    id: track.id,
     name: track.name,
-    artist: track.artist,
+    artists: track.artists || [],
     album: track.album,
-    duration: track.duration,
-    progress: track.progress
+    duration_ms: track.duration_ms,
+    external_urls: track.external_urls
   }
 }
 
@@ -437,7 +436,7 @@ export const validateArray = <T>(
     try {
       return validator(item)
     } catch (error) {
-      throw new ValidationError(`Invalid ${fieldName} at index ${index}: ${error.message}`)
+      throw new ValidationError(`Invalid ${fieldName} at index ${index}: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   })
 }

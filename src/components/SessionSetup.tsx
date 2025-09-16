@@ -83,13 +83,15 @@ export function SessionSetup({ onStartSession, onDurationChange, initialDuration
         
         {/* Skip breaks checkbox - only show if not forced by preferences */}
         {!state.preferences.skipBreaks && (
-          <label className="flex items-center justify-center space-x-2 text-gray-600 dark:text-gray-400 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={skipBreaks}
-              onChange={(e) => setSkipBreaks(e.target.checked)}
-              className="w-4 h-4 text-indigo-600 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:bg-gray-700"
-            />
+          <label className="flex items-center justify-center space-x-3 text-gray-600 dark:text-gray-400 cursor-pointer">
+            <div className="custom-checkbox">
+              <input
+                type="checkbox"
+                checked={skipBreaks}
+                onChange={(e) => setSkipBreaks(e.target.checked)}
+              />
+              <span className="checkmark"></span>
+            </div>
             <span>Skip breaks</span>
           </label>
         )}
@@ -128,7 +130,7 @@ export function SessionSetup({ onStartSession, onDurationChange, initialDuration
       {/* Start button */}
       <button
         onClick={handleStartSession}
-        className="w-full bg-indigo-600 dark:bg-indigo-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors flex items-center justify-center space-x-2"
+        className="w-full btn-accent py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
       >
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />

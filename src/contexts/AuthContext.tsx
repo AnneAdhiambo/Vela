@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react'
 import { UserProfile, AuthState } from '../types'
-import { chromeApi } from '../utils/chrome-api'
 import { config, devLog } from '../config/development'
-import { emailJSAuthService } from '../services/auth-emailjs'
+import { webhookAuthService } from '../services/auth-webhook'
 
 type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
@@ -14,8 +13,8 @@ type AuthAction =
 interface AuthContextType {
   state: AuthState
   dispatch: React.Dispatch<AuthAction>
-  sendMagicLink: (email: string) => Promise<boolean>
-  verifyMagicLink: (token: string) => Promise<boolean>
+  sendMagicLink: (email: string) => Promise<{ success: boolean; token?: string; magicLink?: string }>
+  waitForVerification: (token: string) => Promise<boolean>
   logout: () => void
   clearError: () => void
 }
@@ -59,41 +58,12 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, dispatch] = useReducer(authReducer, initialState)
 
-  // Check for magic link token in URL on mount
+  // Check for existing authentication on mount
   useEffect(() => {
-    const checkForMagicLinkToken = async () => {
-      const urlParams = new URLSearchParams(window.location.search)
-      const token = urlParams.get('token')
-      const spotifyCode = urlParams.get('code') // Check for Spotify OAuth
-      
-      // Prioritize magic link authentication over Spotify OAuth
-      if (token && !spotifyCode) {
-        devLog.info('Found magic link token in URL, attempting verification')
-        dispatch({ type: 'SET_LOADING', payload: true })
-        
-        const success = await verifyMagicLink(token)
-        if (success) {
-          // Clear token from URL and redirect to dashboard
-          const newUrl = window.location.pathname
-          window.history.replaceState({}, document.title, newUrl)
-        }
-        
-        dispatch({ type: 'SET_LOADING', payload: false })
-        return true // Token was processed
-      }
-      
-      return false // No token in URL
-    }
-
     const checkAuth = async () => {
       try {
         dispatch({ type: 'SET_LOADING', payload: true })
-        
-        // First check for magic link token
-        const tokenProcessed = await checkForMagicLinkToken()
-        if (tokenProcessed) {
-          return // Token was processed, auth state is already updated
-        }
+        console.log('🔍 Checking authentication state on mount...')
         
         // Skip auth entirely in development if configured
         if (config.features.skipAuthInDev) {
@@ -102,27 +72,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return
         }
         
-        const result = await chromeApi.storage.local.get(['userProfile', 'authToken'])
+        // Check if user is already authenticated
+        const isAuthenticated = await webhookAuthService.isAuthenticated()
+        console.log('🔍 Authentication check result:', isAuthenticated)
         
-        if (result.userProfile && result.authToken) {
-          // Verify token is still valid
-          const isValid = await verifyToken(result.authToken)
-          if (isValid) {
-            console.log('🔒 User authenticated from stored credentials')
-            dispatch({ type: 'SET_USER', payload: result.userProfile })
-            
-            // Clean up any URL parameters for authenticated users
-            const urlParams = new URLSearchParams(window.location.search)
-            if (urlParams.toString().length > 0) {
-              console.log('🧹 Cleaning URL parameters for authenticated user')
-              window.history.replaceState({}, document.title, window.location.pathname)
-            }
-          } else {
-            // Token expired, clear auth data
-            console.log('🔓 Token expired, clearing auth data')
-            await chromeApi.storage.local.remove(['userProfile', 'authToken'])
-            dispatch({ type: 'SET_USER', payload: null })
-          }
+        if (isAuthenticated) {
+          const user = webhookAuthService.getCurrentUser()
+          console.log('🔒 User authenticated from stored credentials:', user)
+          dispatch({ type: 'SET_USER', payload: user })
         } else {
           console.log('👤 No stored authentication found')
           dispatch({ type: 'SET_USER', payload: null })
@@ -138,87 +95,101 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuth()
   }, [])
 
-  const sendMagicLink = async (email: string): Promise<boolean> => {
+  // Listen for auth success messages from background script
+  useEffect(() => {
+    const handleMessage = (message: any, sender: any, sendResponse: (response?: any) => void) => {
+      console.log('📨 AuthContext received message:', message, 'from sender:', sender)
+      
+      if (message.type === 'MAGIC_LINK_AUTH_SUCCESS' && message.token && message.user) {
+        console.log('🔗 Received magic link auth success from background script')
+        console.log('📋 User data:', message.user)
+        console.log('🔑 Auth token:', message.token)
+        
+        // Update the auth context state directly
+        dispatch({ type: 'SET_USER', payload: message.user })
+        console.log('✅ User authenticated via magic link message')
+        
+        sendResponse({ received: true })
+      }
+    }
+
+    // Listen for messages from background script
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      console.log('👂 Setting up message listener for magic link auth')
+      chrome.runtime.onMessage.addListener(handleMessage)
+      
+      return () => {
+        console.log('🔇 Removing message listener')
+        chrome.runtime.onMessage.removeListener(handleMessage)
+      }
+    }
+  }, [])
+
+  const sendMagicLink = async (email: string): Promise<{ success: boolean; token?: string; magicLink?: string }> => {
     try {
-      dispatch({ type: 'SET_LOADING', payload: true })
       dispatch({ type: 'CLEAR_ERROR' })
 
-      // Use EmailJS service for sending magic links
+      // Use webhook service for sending magic links
       console.log('📧 Attempting to send magic link to:', email)
-      const success = await emailJSAuthService.sendMagicLink(email)
+      const result = await webhookAuthService.sendMagicLink(email)
       
-      if (success) {
+      if (result.success) {
         console.log('✅ Magic link sent successfully! User should check their email.')
+        console.log('🔗 Magic link:', result.magicLink)
       } else {
-        console.log('❌ Failed to send magic link')
+        console.log('❌ Failed to send magic link:', result.error)
+        dispatch({ type: 'SET_ERROR', payload: result.error || 'Failed to send magic link' })
       }
       
-      dispatch({ type: 'SET_LOADING', payload: false })
-      return success
+      return result
     } catch (error) {
       console.error('Error sending magic link:', error)
-      
-      let errorMessage = 'Failed to send magic link. Please try again.'
-      
-      if (error instanceof Error) {
-        if (error.message.includes('422')) {
-          errorMessage = 'Email configuration error. Please check your EmailJS setup.'
-        } else if (error.message.includes('recipients address is empty')) {
-          errorMessage = 'Email template configuration error. Please contact support.'
-        } else if (error.message.includes('Invalid email format')) {
-          errorMessage = 'Please enter a valid email address.'
-        } else {
-          errorMessage = error.message
-        }
-      }
-      
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send magic link'
       dispatch({ type: 'SET_ERROR', payload: errorMessage })
-      dispatch({ type: 'SET_LOADING', payload: false })
-      return false
+      return { success: false }
     }
   }
 
-  const verifyMagicLink = async (token: string): Promise<boolean> => {
+  const waitForVerification = async (token: string): Promise<boolean> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true })
       dispatch({ type: 'CLEAR_ERROR' })
 
-      // Use EmailJS service for verification
-      const result = await emailJSAuthService.verifyMagicLink(token)
+      // Wait for magic link verification
+      const result = await webhookAuthService.waitForVerification(token)
       
-      if (!result.success) {
+      if (result.success && result.user) {
+        dispatch({ type: 'SET_USER', payload: result.user })
+        return true
+      } else {
         throw new Error(result.error || 'Authentication failed')
       }
-
-      // Store user data and token
-      await chromeApi.storage.local.set({
-        userProfile: result.user,
-        authToken: result.token
-      })
-
-      dispatch({ type: 'SET_USER', payload: result.user! })
-      return true
     } catch (error) {
-      console.error('Error verifying magic link:', error)
-      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Invalid or expired magic link' })
+      console.error('Error waiting for verification:', error)
+      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Verification failed' })
       return false
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false })
     }
   }
 
   const logout = async () => {
     try {
-      // Get current auth token
-      const result = await chromeApi.storage.local.get(['authToken'])
-      if (result.authToken) {
-        // Logout from EmailJS service
-        await emailJSAuthService.logout(result.authToken)
-      }
-      
-      // Clear local storage
-      await chromeApi.storage.local.remove(['userProfile', 'authToken'])
+      // Logout from webhook service
+      await webhookAuthService.logout()
       dispatch({ type: 'LOGOUT' })
+      
+      // Redirect to welcome page with logout indicator
+      const currentUrl = new URL(window.location.href)
+      currentUrl.searchParams.set('logged_out', 'true')
+      window.location.href = currentUrl.toString()
     } catch (error) {
       console.error('Error during logout:', error)
+      // Even if logout service fails, clear local auth and redirect
+      dispatch({ type: 'LOGOUT' })
+      const currentUrl = new URL(window.location.href)
+      currentUrl.searchParams.set('logged_out', 'true')
+      window.location.href = currentUrl.toString()
     }
   }
 
@@ -230,7 +201,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     state,
     dispatch,
     sendMagicLink,
-    verifyMagicLink,
+    waitForVerification,
     logout,
     clearError
   }
@@ -248,14 +219,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
-}
-
-// Helper function to verify token
-async function verifyToken(token: string): Promise<boolean> {
-  try {
-    return await emailJSAuthService.verifyToken(token)
-  } catch (error) {
-    devLog.error('Token verification failed:', error)
-    return false
-  }
 }

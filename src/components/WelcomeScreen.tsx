@@ -1,186 +1,282 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { Toast } from './Toast'
+import { MagicLinkWait } from './MagicLinkWait'
 
 export function WelcomeScreen() {
   const { sendMagicLink, state, clearError } = useAuth()
   const [email, setEmail] = useState('')
-  const [isSubmitted, setIsSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [sendingStep, setSendingStep] = useState<'idle' | 'validating' | 'sending' | 'sent' | 'waiting' | 'error'>('idle')
+  const [magicLinkToken, setMagicLinkToken] = useState<string | null>(null)
+  const [sentEmail, setSentEmail] = useState('')
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>({
+    message: '',
+    type: 'info',
+    isVisible: false
+  })
+
+  // Check if user just logged out and show welcome back message
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const loggedOut = urlParams.get('logged_out')
+    
+    if (loggedOut === 'true') {
+      setToast({
+        message: '👋 You have been signed out successfully. Sign in again to continue.',
+        type: 'info',
+        isVisible: true
+      })
+      
+      // Clean up URL parameter
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, document.title, newUrl)
+    }
+  }, [])
+
+  // Check if user is already authenticated on mount
+  useEffect(() => {
+    const checkExistingAuth = async () => {
+      try {
+        // Check if there's already an auth token in storage
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          const result = await chrome.storage.local.get(['vela_auth_token', 'vela_user'])
+          if (result.vela_auth_token && result.vela_user) {
+            console.log('🔍 WelcomeScreen found existing auth, user should be redirected')
+            // The AuthContext should handle this, but let's log it for debugging
+            return
+          }
+        } else {
+          // Fallback to localStorage
+          const token = localStorage.getItem('vela_auth_token')
+          const user = localStorage.getItem('vela_user')
+          if (token && user) {
+            console.log('🔍 WelcomeScreen found existing auth in localStorage, user should be redirected')
+            return
+          }
+        }
+      } catch (error) {
+        console.error('Error checking existing auth in WelcomeScreen:', error)
+      }
+    }
+
+    checkExistingAuth()
+  }, [])
+
+  // Debug: Monitor state changes
+  useEffect(() => {
+    console.log('🔍 State changed - sendingStep:', sendingStep, 'magicLinkToken:', magicLinkToken ? 'Set' : 'None')
+  }, [sendingStep, magicLinkToken])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email.trim()) return
 
     setIsLoading(true)
+    setSendingStep('validating')
     clearError() // Clear any previous errors
     
+    // Step 1: Validate email format
+    setTimeout(() => {
+      setSendingStep('sending')
+    }, 500)
+    
     try {
-      const success = await sendMagicLink(email.trim())
-      if (success) {
-        console.log('✅ Magic link sent successfully, showing check email screen')
-        setIsSubmitted(true)
+      const result = await sendMagicLink(email.trim())
+      if (result.success && result.token) {
+        console.log('✅ Magic link sent successfully')
+        console.log('🔗 Magic link:', result.magicLink)
+        
+        const emailToSend = email.trim()
+        
+        // Update states for waiting screen
+        setSendingStep('waiting')
+        setMagicLinkToken(result.token)
+        setSentEmail(emailToSend)
+        
+        setToast({
+          message: `🎉 Magic link sent to ${emailToSend}! Check your email inbox and click the link to sign in.`,
+          type: 'success',
+          isVisible: true
+        })
+        
+        // Reset form after successful send
+        setEmail('')
       } else {
         console.log('❌ Magic link sending failed')
+        setSendingStep('error')
+        setToast({
+          message: '❌ Failed to send magic link. Please try again.',
+          type: 'error',
+          isVisible: true
+        })
       }
     } catch (error) {
       console.error('❌ Error in handleSubmit:', error)
+      setSendingStep('error')
+      setToast({
+        message: '❌ An error occurred. Please try again.',
+        type: 'error',
+        isVisible: true
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleTryAgain = () => {
-    setIsSubmitted(false)
-    setIsLoading(false)
-    clearError()
+  const handleMagicLinkSuccess = () => {
+    console.log('✅ Magic link verification successful')
+    setSendingStep('sent')
+    setToast({
+      message: '🎉 Welcome to Vela! You are now signed in.',
+      type: 'success',
+      isVisible: true
+    })
   }
 
-  if (isSubmitted) {
+  const handleMagicLinkError = (error: string) => {
+    console.error('❌ Magic link verification failed:', error)
+    setSendingStep('error')
+    setToast({
+      message: error || 'Magic link verification failed. Please try again.',
+      type: 'error',
+      isVisible: true
+    })
+  }
+
+  const handleMagicLinkCancel = () => {
+    setMagicLinkToken(null)
+    setSendingStep('idle')
+    setToast({ message: '', type: 'info', isVisible: false })
+  }
+
+  const handleCloseToast = () => {
+    setToast({ ...toast, isVisible: false })
+  }
+
+  // Show magic link wait screen when waiting for verification
+  if (sendingStep === 'waiting' && magicLinkToken) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-900 flex items-center justify-center p-6">
-        <div className="max-w-md w-full">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
-            
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              📧 Check Your Email!
-            </h2>
-            
-            <p className="text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
-              We've sent a secure magic link to:
-            </p>
-            
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3 mb-6">
-              <p className="font-semibold text-indigo-700 dark:text-indigo-300 break-all">
-                {email}
-              </p>
-            </div>
-            
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-              <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">
-                🔍 What to do next:
-              </h3>
-              <ul className="text-sm text-blue-700 dark:text-blue-300 text-left space-y-1">
-                <li>• Check your email inbox</li>
-                <li>• Look for an email from Vela</li>
-                <li>• Click the "Sign in to Vela" button</li>
-                <li>• You'll be automatically signed in!</li>
-              </ul>
-            </div>
-            
-            <div className="text-sm text-gray-500 dark:text-gray-400 space-y-3">
-              <p>⏰ The link expires in <strong>15 minutes</strong> for security</p>
-              
-              <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
-                <p className="mb-2">Didn't receive the email?</p>
-                <div className="space-y-2">
-                  <p>• Check your spam/junk folder</p>
-                  <p>• Wait a minute and check again</p>
-                  <button 
-                    onClick={handleTryAgain}
-                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
-                  >
-                    • Try a different email address
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <MagicLinkWait
+        email={sentEmail}
+        token={magicLinkToken}
+        onSuccess={handleMagicLinkSuccess}
+        onError={handleMagicLinkError}
+        onCancel={handleMagicLinkCancel}
+      />
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-900 flex items-center justify-center p-6">
-      <div className="max-w-4xl w-full">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-blue-400/20 to-indigo-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-cyan-400/10 to-purple-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+      
+      <div className="max-w-4xl w-full relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left side - Features */}
-          <div className="space-y-8">
+          <div className="space-y-8 animate-slide-in-left">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              <h1 className="text-5xl font-bold text-gray-900 dark:text-gray-100 mb-6 leading-tight" style={{ fontFamily: 'Manrope, sans-serif' }}>
                 Transform Every New Tab Into a 
-                <span className="text-indigo-600 dark:text-indigo-400"> Productivity Opportunity</span>
+                <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent"> Productivity Opportunity</span>
               </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-300">
+              <p className="text-xl text-gray-600 dark:text-gray-400 leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>
                 Focus sessions, task management, and progress tracking - all in your new tab page.
               </p>
             </div>
 
             <div className="space-y-6">
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-start space-x-4 group hover:scale-105 transition-transform duration-300">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl transition-all duration-300">
+                  <svg className="w-5 h-5 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Focus Timer</h3>
-                  <p className="text-gray-600 dark:text-gray-300">Circular progress timer with customizable Pomodoro sessions</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>Focus Timer</h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>Circular progress timer with customizable Pomodoro sessions</p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-start space-x-4 group hover:scale-105 transition-transform duration-300">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl transition-all duration-300">
+                  <svg className="w-5 h-5 text-white animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ animationDuration: '2s' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Task Management</h3>
-                  <p className="text-gray-600 dark:text-gray-300">Create, organize, and track your daily tasks with drag-and-drop</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>Task Management</h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>Create, organize, and track your daily tasks with drag-and-drop</p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-start space-x-4 group hover:scale-105 transition-transform duration-300">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl transition-all duration-300">
+                  <svg className="w-5 h-5 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Spotify Integration</h3>
-                  <p className="text-gray-600 dark:text-gray-300">Control your focus music without leaving your dashboard</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>Spotify Integration</h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>Control your focus music without leaving your dashboard</p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-start space-x-4 group hover:scale-105 transition-transform duration-300">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl transition-all duration-300">
+                  <svg className="w-5 h-5 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Progress Tracking</h3>
-                  <p className="text-gray-600 dark:text-gray-300">Daily statistics, streak counter, and motivational feedback</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>Progress Tracking</h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>Daily statistics, streak counter, and motivational feedback</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Right side - Sign in form */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 p-8 animate-slide-in-right hover:shadow-3xl transition-all duration-500 animate-glow">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 animate-float">
+                <img 
+                  src="/logo.png" 
+                  alt="Vela Logo" 
+                  className="w-full h-full object-contain bg-transparent"
+                />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                Get Started with Vela
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                Sign in with your email to sync your tasks and settings across devices
-              </p>
+              
+              {/* Show logout message if user just logged out */}
+              {new URLSearchParams(window.location.search).get('logged_out') === 'true' ? (
+                <>
+                  <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    See You Soon
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    You have been successfully signed out. Sign in again to continue your productivity journey.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    Get Started with Vela
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    Sign in with your email to sync your tasks and settings across devices
+                  </p>
+                </>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3" style={{ fontFamily: 'Manrope, sans-serif' }}>
                   Email Address
                 </label>
                 <input
@@ -190,7 +286,8 @@ export function WelcomeScreen() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email address"
                   disabled={isLoading || state.isLoading}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:border-purple-300"
+                  style={{ fontFamily: 'Manrope, sans-serif' }}
                   required
                 />
               </div>
@@ -198,15 +295,31 @@ export function WelcomeScreen() {
               <button
                 type="submit"
                 disabled={isLoading || state.isLoading || !email.trim()}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center"
+                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-4 px-6 rounded-xl font-semibold flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:transform-none disabled:shadow-lg"
+                style={{ fontFamily: 'Manrope, sans-serif' }}
               >
-                {(isLoading || state.isLoading) ? (
+                {sendingStep === 'validating' ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Sending Magic Link...
+                    Validating email...
+                  </>
+                ) : sendingStep === 'sending' ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending magic link...
+                  </>
+                ) : sendingStep === 'sent' ? (
+                  <>
+                    <svg className="w-5 h-5 mr-2 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Magic link sent!
                   </>
                 ) : (
                   <>
@@ -239,11 +352,37 @@ export function WelcomeScreen() {
             )}
 
             <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-              <p>No password required. We'll send you a secure link to sign in.</p>
+              <p style={{ fontFamily: 'Manrope, sans-serif' }}>No password required. We'll send you a secure link to sign in.</p>
             </div>
+
+            {/* Success message when magic link is sent */}
+            {sendingStep === 'sent' && (
+              <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl animate-in fade-in duration-500 shadow-lg">
+                <div className="flex items-center justify-center space-x-3 mb-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center animate-bounce">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="font-bold text-green-800 dark:text-green-200 text-lg">Welcome to Vela!</span>
+                </div>
+                <p className="text-sm text-green-700 dark:text-green-300 text-center leading-relaxed">
+                  You are now signed in and ready to start your productivity journey.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={handleCloseToast}
+        duration={5000}
+      />
     </div>
   )
 }

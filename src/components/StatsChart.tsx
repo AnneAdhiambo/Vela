@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useApp } from '../contexts/AppContext'
 import { chromeApi } from '../utils/chrome-api'
-import { DailyStats } from '../types'
 
 interface WeeklyStatsData {
   day: string
@@ -12,18 +11,40 @@ interface WeeklyStatsData {
 }
 
 export function StatsChart() {
-  const { theme } = useTheme()
+  const { } = useTheme()
   const { state } = useApp()
   const [weeklyStats, setWeeklyStats] = useState<WeeklyStatsData[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     loadWeeklyStats()
+    
+    // Listen for session tracking updates
+    const handleMessage = (message: any) => {
+      if (message.type === 'SESSION_TRACKED' || message.type === 'TIMER_COMPLETE' || message.type === 'STOP_TIMER') {
+        console.log('📊 Stats update received, reloading...')
+        loadWeeklyStats()
+      }
+    }
+    
+    chrome.runtime.onMessage.addListener(handleMessage)
+    
+    return () => {
+      chrome.runtime.onMessage.removeListener(handleMessage)
+    }
   }, [])
 
   const loadWeeklyStats = async () => {
     try {
       setIsLoading(true)
+      
+      // Get session stats from background script
+      const result = await chromeApi.storage.local.get(['sessionStats', 'todaysStats'])
+      const sessionStats = result.sessionStats || { sessions: [], totalSessions: 0, totalFocusTime: 0 }
+      const todaysStats = result.todaysStats || { totalSessions: 0, totalFocusTime: 0 }
+      
+      console.log('📊 Loading stats - sessionStats:', sessionStats)
+      console.log('📊 Loading stats - todaysStats:', todaysStats)
       
       // Get the last 7 days of stats
       const today = new Date()
@@ -34,26 +55,25 @@ export function StatsChart() {
         date.setDate(date.getDate() - i)
         const dateStr = date.toISOString().split('T')[0]
         
-        // Try to get stats for this date
-        const result = await chromeApi.storage.local.get([`dailyStats_${dateStr}`])
-        const dayStats: DailyStats = result[`dailyStats_${dateStr}`] || {
-          date: dateStr,
-          sessionsStarted: 0,
-          sessionsCompleted: 0,
-          totalFocusTime: 0,
-          tasksCreated: 0,
-          tasksCompleted: 0,
-          streak: 0
-        }
+        // Get sessions for this specific date
+        const daySessions = sessionStats.sessions?.filter((session: any) => session.date === dateStr) || []
+        const daySessionsCount = daySessions.length
+        const dayFocusTime = daySessions.reduce((sum: number, session: any) => sum + (session.duration || 0), 0)
+        
+        // For today, also check todaysStats as fallback
+        const isToday = i === 0
+        const sessions = isToday ? Math.max(daySessionsCount, todaysStats.totalSessions || 0) : daySessionsCount
+        const focusTime = isToday ? Math.max(dayFocusTime, todaysStats.totalFocusTime || 0) : dayFocusTime
         
         weeklyData.push({
           day: date.toLocaleDateString('en-US', { weekday: 'short' }),
           date: dateStr,
-          sessions: dayStats.sessionsCompleted,
-          focusTime: dayStats.totalFocusTime
+          sessions: sessions,
+          focusTime: focusTime
         })
       }
       
+      console.log('📊 Weekly data loaded:', weeklyData)
       setWeeklyStats(weeklyData)
     } catch (error) {
       console.error('Error loading weekly stats:', error)
@@ -113,17 +133,17 @@ export function StatsChart() {
       
       {/* Today's stats */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="text-center p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-          <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+        <div className="text-center p-3 bg-accent-light rounded-lg">
+          <div className="text-2xl font-bold text-accent">
             {todaysStats.sessions}
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-300">Sessions Today</div>
+          <div className="text-sm text-gray-600 dark:text-gray-300">Total Sessions</div>
         </div>
-        <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+        <div className="text-center p-3 bg-accent-light rounded-lg">
+          <div className="text-2xl font-bold text-accent">
             {Math.floor(todaysStats.focusTime / 60)}h {todaysStats.focusTime % 60}m
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-300">Focus Time</div>
+          <div className="text-sm text-gray-600 dark:text-gray-300">Total Focus Time</div>
         </div>
       </div>
 
@@ -143,54 +163,59 @@ export function StatsChart() {
         </div>
       </div>
 
-      {/* Weekly chart */}
+      {/* Weekly chart - Vertical bars */}
       <div className="space-y-3">
         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Daily Sessions</h4>
-        {weeklyStats.map((day, index) => {
-          const isToday = index === weeklyStats.length - 1
-          const percentage = maxSessions > 0 ? (day.sessions / maxSessions) * 100 : 0
-          
-          return (
-            <div key={day.date} className="flex items-center space-x-3">
-              <div className={`w-8 text-xs font-medium ${
-                isToday 
-                  ? 'text-indigo-600 dark:text-indigo-400' 
-                  : 'text-gray-600 dark:text-gray-300'
-              }`}>
-                {day.day}
-              </div>
-              <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 relative overflow-hidden">
-                <div 
-                  className={`h-3 rounded-full transition-all duration-700 ease-out ${
-                    isToday 
-                      ? 'bg-indigo-500 dark:bg-indigo-400' 
-                      : 'bg-gray-400 dark:bg-gray-500'
-                  }`}
-                  style={{ 
-                    width: `${percentage}%`,
-                    transitionDelay: `${index * 100}ms`
-                  }}
-                />
-                {day.sessions > 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xs font-medium text-white mix-blend-difference">
-                      {day.sessions}
-                    </span>
+        <div className="flex items-end justify-between space-x-2 h-32">
+          {weeklyStats.map((day, index) => {
+            const isToday = index === weeklyStats.length - 1
+            const percentage = maxSessions > 0 ? (day.sessions / maxSessions) * 100 : 0
+            // Always show bars - minimum 20px for empty bars, scale based on sessions
+            const barHeight = day.sessions > 0 ? Math.max(percentage * 0.8, 20) : 20
+            
+            return (
+              <div key={day.date} className="flex flex-col items-center space-y-2 flex-1">
+                <div className="flex flex-col items-center space-y-1">
+                  <div 
+                    className={`w-full rounded-t transition-all duration-700 ease-out ${
+                      day.sessions > 0
+                        ? (isToday 
+                          ? 'bg-accent' 
+                          : 'bg-accent-light')
+                        : 'bg-gray-200 dark:bg-gray-600'
+                    }`}
+                    style={{ 
+                      height: `${barHeight}px`,
+                      transitionDelay: `${index * 100}ms`
+                    }}
+                  />
+                  <div className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                    {day.sessions}
                   </div>
-                )}
+                </div>
+                <div className={`text-xs font-medium ${
+                  isToday 
+                    ? 'text-accent' 
+                    : 'text-gray-600 dark:text-gray-300'
+                }`}>
+                  {day.day}
+                </div>
               </div>
-              <div className="w-12 text-xs text-gray-600 dark:text-gray-300 text-right">
-                {day.focusTime > 0 && `${Math.floor(day.focusTime / 60)}h${day.focusTime % 60 > 0 ? ` ${day.focusTime % 60}m` : ''}`}
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
+        <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-2">
+          {totalWeekSessions} total sessions this week
+        </div>
+        <div className="text-center text-xs text-gray-400 dark:text-gray-500 mt-1">
+          {weeklyStats.reduce((sum, day) => sum + (day.sessions || 0), 0)} completed sessions
+        </div>
       </div>
 
       {/* Motivational message */}
       {todaysStats.sessions > 0 && (
-        <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800">
-          <p className="text-sm text-indigo-700 dark:text-indigo-300 text-center">
+        <div className="mt-4 p-3 gradient-accent-light rounded-lg border border-accent">
+          <p className="text-sm text-accent-dark text-center">
             {getMotivationalMessage(todaysStats.sessions, state.todaysStats.streak)}
           </p>
         </div>

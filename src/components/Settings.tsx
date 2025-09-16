@@ -10,17 +10,23 @@ interface SettingsProps {
 }
 
 const accentColors = [
-  { name: 'Blue', value: 'blue', color: 'bg-blue-500', ring: 'ring-blue-500' },
-  { name: 'Green', value: 'green', color: 'bg-green-500', ring: 'ring-green-500' },
-  { name: 'Purple', value: 'purple', color: 'bg-purple-500', ring: 'ring-purple-500' },
-  { name: 'Pink', value: 'pink', color: 'bg-pink-500', ring: 'ring-pink-500' },
-  { name: 'Orange', value: 'orange', color: 'bg-orange-500', ring: 'ring-orange-500' },
-  { name: 'Red', value: 'red', color: 'bg-red-500', ring: 'ring-red-500' },
+  { name: 'Blue', value: 'blue', color: 'bg-blue-500' },
+  { name: 'Green', value: 'green', color: 'bg-green-500' },
+  { name: 'Purple', value: 'purple', color: 'bg-purple-500' },
+  { name: 'Pink', value: 'pink', color: 'bg-pink-500' },
+  { name: 'Orange', value: 'orange', color: 'bg-orange-500' },
+  { name: 'Red', value: 'red', color: 'bg-red-500' },
+  { name: 'Indigo', value: 'indigo', color: 'bg-indigo-500' },
+  { name: 'Teal', value: 'teal', color: 'bg-teal-500' },
+  { name: 'Cyan', value: 'cyan', color: 'bg-cyan-500' },
+  { name: 'Emerald', value: 'emerald', color: 'bg-emerald-500' },
+  { name: 'Violet', value: 'violet', color: 'bg-violet-500' },
+  { name: 'Rose', value: 'rose', color: 'bg-rose-500' },
 ] as const
 
 export function Settings({ isOpen, onClose }: SettingsProps) {
   const { state, updatePreferences } = useApp()
-  const { theme, accentColor, setTheme, setAccentColor } = useTheme()
+  const { setTheme, setAccentColor } = useTheme()
   const { logout } = useAuth()
   const [localPreferences, setLocalPreferences] = useState<UserPreferences>(state.preferences)
 
@@ -108,20 +114,20 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Accent Color
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               {accentColors.map((accent) => (
                 <button
                   key={accent.value}
                   onClick={() => handlePreferenceChange('accentColor', accent.value)}
-                  className={`p-3 rounded-lg border-2 transition-colors ${
+                  className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                     localPreferences.accentColor === accent.value
-                      ? `border-${accent.value}-500 bg-${accent.value}-50 dark:bg-${accent.value}-900/20`
-                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                      ? 'border-accent bg-accent-light ring-2 ring-accent ring-opacity-50'
+                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:scale-105'
                   }`}
                 >
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-4 h-4 rounded-full ${accent.color}`} />
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className={`w-6 h-6 rounded-full ${accent.color} shadow-sm`} />
+                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                       {accent.name}
                     </span>
                   </div>
@@ -180,7 +186,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
               <button
                 onClick={() => handlePreferenceChange('notificationsEnabled', !localPreferences.notificationsEnabled)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  localPreferences.notificationsEnabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'
+                  localPreferences.notificationsEnabled ? 'bg-accent' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               >
                 <span
@@ -196,7 +202,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
               <button
                 onClick={() => handlePreferenceChange('soundEnabled', !localPreferences.soundEnabled)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  localPreferences.soundEnabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'
+                  localPreferences.soundEnabled ? 'bg-accent' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               >
                 <span
@@ -212,7 +218,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
               <button
                 onClick={() => handlePreferenceChange('skipBreaks', !localPreferences.skipBreaks)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  localPreferences.skipBreaks ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'
+                  localPreferences.skipBreaks ? 'bg-accent' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               >
                 <span
@@ -228,7 +234,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
               <button
                 onClick={() => handlePreferenceChange('motivationalQuotes', !localPreferences.motivationalQuotes)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  localPreferences.motivationalQuotes ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'
+                  localPreferences.motivationalQuotes ? 'bg-accent' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               >
                 <span
@@ -262,7 +268,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="px-4 py-2 text-sm btn-accent rounded-lg transition-colors"
           >
             Save Changes
           </button>

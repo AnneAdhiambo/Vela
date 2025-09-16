@@ -1,73 +1,25 @@
-import { useReducer, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { TimerState, SessionConfig } from '../types'
 import { 
   formatTime, 
   calculateProgress, 
   calculateStrokeDashoffset,
-  getTimerStateDescription,
-  shouldShowCompletionAnimation
+  getTimerStateDescription
 } from '../utils/timer'
+
+// Helper function to check if we're in extension environment
+const isExtensionEnvironment = (): boolean => {
+  return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id
+}
 
 interface TimerDisplayProps {
   onSessionComplete: (session: { duration: number; sessionType: 'work' | 'break' }) => void
   onSessionStart: (sessionConfig: SessionConfig) => void
   onNewSession?: () => void
+  onStopSession?: () => void
   initialState?: Partial<TimerState>
 }
 
-interface TimerAction {
-  type: 'START' | 'PAUSE' | 'RESUME' | 'STOP' | 'TICK' | 'SET_DURATION' | 'SET_STREAK'
-  payload?: number
-}
-
-function timerReducer(state: TimerState, action: TimerAction): TimerState {
-  switch (action.type) {
-    case 'START':
-      return {
-        ...state,
-        isActive: true,
-        isPaused: false,
-        timeRemaining: action.payload || state.totalDuration,
-        totalDuration: action.payload || state.totalDuration
-      }
-    case 'PAUSE':
-      return {
-        ...state,
-        isPaused: true
-      }
-    case 'RESUME':
-      return {
-        ...state,
-        isPaused: false
-      }
-    case 'STOP':
-      return {
-        ...state,
-        isActive: false,
-        isPaused: false,
-        timeRemaining: state.totalDuration
-      }
-    case 'TICK':
-      const newTimeRemaining = Math.max(0, state.timeRemaining - 1)
-      return {
-        ...state,
-        timeRemaining: newTimeRemaining
-      }
-    case 'SET_DURATION':
-      return {
-        ...state,
-        totalDuration: action.payload || state.totalDuration,
-        timeRemaining: action.payload || state.totalDuration
-      }
-    case 'SET_STREAK':
-      return {
-        ...state,
-        streak: action.payload || 0
-      }
-    default:
-      return state
-  }
-}
 
 const defaultTimerState: TimerState = {
   timeRemaining: 25 * 60, // 25 minutes in seconds
@@ -78,28 +30,55 @@ const defaultTimerState: TimerState = {
   streak: 2
 }
 
-export function TimerDisplay({ onSessionComplete, onSessionStart, onNewSession, initialState }: TimerDisplayProps) {
-  const [timerState, dispatch] = useReducer(timerReducer, {
+export function TimerDisplay({ onSessionComplete, onSessionStart, onNewSession, onStopSession, initialState }: TimerDisplayProps) {
+  const [timerState, setTimerState] = useState({
     ...defaultTimerState,
     ...initialState
   })
+  const [, setIsInitialized] = useState(false)
 
-  // Timer tick effect
+  // Sync with background script for real-time updates
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null
-
-    if (timerState.isActive && !timerState.isPaused) {
-      interval = setInterval(() => {
-        dispatch({ type: 'TICK' })
-      }, 1000)
+    if (!isExtensionEnvironment()) {
+      return
     }
 
-    return () => {
-      if (interval) {
-        clearInterval(interval)
+    const syncWithBackground = async () => {
+      try {
+        const backgroundState = await chrome.runtime.sendMessage({ type: 'GET_TIMER_STATE' })
+        console.log('🔄 TimerDisplay syncing with background:', backgroundState)
+        
+        if (backgroundState && backgroundState.isActive) {
+          setTimerState({
+            timeRemaining: Math.ceil(backgroundState.timeRemaining),
+            totalDuration: Math.ceil(backgroundState.plannedDuration),
+            isActive: backgroundState.isActive,
+            isPaused: backgroundState.isPaused,
+            sessionType: 'work',
+            streak: 2
+          })
+          setIsInitialized(true)
+        } else if (backgroundState && !backgroundState.isActive) {
+          // Session ended, reset to default state
+          setTimerState({
+            ...defaultTimerState,
+            ...initialState
+          })
+          setIsInitialized(true)
+        }
+      } catch (error) {
+        console.error('Failed to sync timer with background:', error)
       }
     }
-  }, [timerState.isActive, timerState.isPaused])
+
+    // Always sync immediately on mount
+    syncWithBackground()
+
+    // Then sync every second for real-time updates
+    const interval = setInterval(syncWithBackground, 1000)
+    
+    return () => clearInterval(interval)
+  }, [])
 
   // Session completion effect
   useEffect(() => {
@@ -108,16 +87,15 @@ export function TimerDisplay({ onSessionComplete, onSessionStart, onNewSession, 
         duration: timerState.totalDuration,
         sessionType: timerState.sessionType
       })
-      dispatch({ type: 'STOP' })
     }
   }, [timerState.timeRemaining, timerState.isActive, timerState.totalDuration, timerState.sessionType, onSessionComplete])
 
   const progress = calculateProgress(timerState.timeRemaining, timerState.totalDuration)
   const strokeDashoffset = calculateStrokeDashoffset(progress)
-  const showCompletionAnimation = shouldShowCompletionAnimation(timerState.timeRemaining, timerState.totalDuration)
+  // const showCompletionAnimation = shouldShowCompletionAnimation(timerState.timeRemaining, timerState.totalDuration)
   const timerDescription = getTimerStateDescription(timerState.isActive, timerState.isPaused, timerState.timeRemaining)
 
-  const handleStartPause = () => {
+  const handleStartPause = async () => {
     if (!timerState.isActive) {
       // Start new session
       const sessionConfig: SessionConfig = {
@@ -127,47 +105,60 @@ export function TimerDisplay({ onSessionComplete, onSessionStart, onNewSession, 
         sessionType: 'pomodoro'
       }
       onSessionStart(sessionConfig)
-      dispatch({ type: 'START', payload: 25 * 60 })
-    } else if (timerState.isPaused) {
-      dispatch({ type: 'RESUME' })
     } else {
-      dispatch({ type: 'PAUSE' })
+      // Pause/Resume existing session
+      try {
+        if (timerState.isPaused) {
+          await chrome.runtime.sendMessage({ type: 'RESUME_TIMER' })
+        } else {
+          await chrome.runtime.sendMessage({ type: 'PAUSE_TIMER' })
+        }
+      } catch (error) {
+        console.error('Failed to pause/resume timer:', error)
+      }
     }
   }
 
   const handleStop = () => {
-    dispatch({ type: 'STOP' })
+    if (onStopSession) {
+      onStopSession()
+    } else {
+      onSessionComplete({
+        duration: timerState.totalDuration,
+        sessionType: timerState.sessionType
+      })
+    }
   }
 
-  const getButtonText = (): string => {
-    if (!timerState.isActive) return 'Start Session'
-    if (timerState.isPaused) return 'Resume'
-    return 'Pause'
-  }
+  // const getButtonText = (): string => {
+  //   if (!timerState.isActive) return 'Start Session'
+  //   if (timerState.isPaused) return 'Resume'
+  //   return 'Pause'
+  // }
 
-  const getStatusIcon = () => {
-    if (!timerState.isActive) {
-      return (
-        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-        </svg>
-      )
-    }
-    
-    if (timerState.isPaused) {
-      return (
-        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-        </svg>
-      )
-    }
-    
-    return (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-      </svg>
-    )
-  }
+  // const getStatusIcon = () => {
+  //   if (!timerState.isActive) {
+  //     return (
+  //       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+  //         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+  //       </svg>
+  //     )
+  //   }
+  //   
+  //   if (timerState.isPaused) {
+  //     return (
+  //       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+  //         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+  //       </svg>
+  //     )
+  //   }
+  //   
+  //   return (
+  //     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+  //       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+  //     </svg>
+  //   )
+  // }
 
   return (
     <div className="text-center">
@@ -230,29 +221,31 @@ export function TimerDisplay({ onSessionComplete, onSessionStart, onNewSession, 
         {timerState.streak}-day streak
       </div>
       
-      {/* Control buttons */}
-      {!timerState.isActive && (
-        <div className="flex space-x-2 justify-center">
-          <button 
-            onClick={handleStartPause}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-          >
-            Start
-          </button>
-          <button 
-            onClick={onNewSession}
-            className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-          >
-            New Session
-          </button>
-        </div>
-      )}
+        {/* Control buttons */}
+        {!timerState.isActive && (
+          <div className="flex space-x-2 justify-center">
+            <button 
+              onClick={handleStartPause}
+              className="btn-accent px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Start
+            </button>
+            {onNewSession && (
+              <button 
+                onClick={onNewSession}
+                className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                New Session
+              </button>
+            )}
+          </div>
+        )}
       
       {timerState.isActive && (
         <div className="flex space-x-2 justify-center">
           <button 
             onClick={handleStartPause}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+            className="btn-accent px-4 py-2 rounded-lg font-medium transition-colors"
           >
             {timerState.isPaused ? 'Resume' : 'Pause'}
           </button>

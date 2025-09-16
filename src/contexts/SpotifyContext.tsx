@@ -28,98 +28,130 @@ export function SpotifyProvider({ children }: SpotifyProviderProps) {
   const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
 
-  // Check authentication status on mount
+  // Check authentication status on mount and periodically
   useEffect(() => {
     const checkAuth = async () => {
-      if (spotifyService.isAuthenticated()) {
+      console.log('🎵 Checking Spotify authentication status...')
+      
+      // First check if we have tokens locally
+      if (spotifyService.hasTokens() && !isConnected) {
         setIsConnected(true)
         await loadPlaylists()
+        console.log('🎵 Spotify connected from local tokens')
+        return
+      }
+      
+      // Then check with background script
+      const isAuth = await spotifyService.isAuthenticated()
+      console.log('🎵 Spotify authentication result:', isAuth)
+      if (isAuth && !isConnected) {
+        setIsConnected(true)
+        await loadPlaylists()
+        console.log('🎵 Spotify connected and playlists loaded')
+      } else if (!isAuth && isConnected) {
+        setIsConnected(false)
+        setPlaylists([])
+        setSelectedPlaylist(null)
+        setIsPlaying(false)
+        console.log('🎵 Spotify disconnected')
       }
     }
     
+    // Check immediately on mount
     checkAuth()
-  }, [])
+    
+    // Check every 30 seconds for authentication changes (reduced frequency)
+    const interval = setInterval(checkAuth, 30000)
+    
+    return () => clearInterval(interval)
+  }, []) // Remove isConnected dependency to prevent multiple intervals
 
-  // Handle OAuth callback - only for authenticated users
+  // Listen for Chrome runtime messages from background script
   useEffect(() => {
-    const handleCallback = async () => {
-      const urlParams = new URLSearchParams(window.location.search)
-      const code = urlParams.get('code')
-      const error = urlParams.get('error')
-      const magicToken = urlParams.get('token') // Check for magic link token
-      
-      // Don't handle Spotify OAuth if there's a magic link token (auth takes priority)
-      if (magicToken) {
-        console.log('Magic link token found, skipping Spotify OAuth handling')
-        return
+    const handleMessage = (message: any, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+      if (message.type === 'SPOTIFY_AUTH_SUCCESS' && message.tokens) {
+        setIsConnected(true)
+        loadPlaylists()
+        console.log('✅ Spotify connected via Chrome message!')
+        sendResponse({ success: true })
+        return true // Indicate that the message was handled
       }
-      
-      if (error) {
-        console.error('Spotify OAuth error:', error)
-        // Clear error from URL and redirect to dashboard
-        window.history.replaceState({}, document.title, window.location.pathname)
-        return
-      }
-      
-      if (code) {
-        console.log('Received Spotify auth code, exchanging for token...')
-        setIsLoading(true)
-        try {
-          const success = await spotifyService.exchangeCodeForToken(code)
-          if (success) {
-            console.log('Successfully connected to Spotify!')
-            setIsConnected(true)
-            await loadPlaylists()
-            
-            // Clear the code from URL and ensure we stay on dashboard
-            window.history.replaceState({}, document.title, window.location.pathname)
-            
-            // Show success message
-            console.log('🎵 Spotify connected successfully! You can now select playlists for your focus sessions.')
-            
-            // Force a small delay to ensure the URL is clean before any redirects
-            setTimeout(() => {
-              console.log('🏠 Redirected back to dashboard after Spotify connection')
-            }, 100)
-          } else {
-            console.error('Failed to exchange code for token')
-          }
-        } catch (error) {
-          console.error('Error during token exchange:', error)
-        }
-        setIsLoading(false)
-      }
+      // Don't handle other message types
+      return false
     }
 
-    // Add a small delay to let AuthContext handle magic links first
-    const timeoutId = setTimeout(handleCallback, 100)
-    return () => clearTimeout(timeoutId)
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener(handleMessage)
+      
+      return () => {
+        chrome.runtime.onMessage.removeListener(handleMessage)
+      }
+    }
   }, [])
+
 
   const loadPlaylists = async () => {
     try {
+      console.log('🎵 Loading user playlists...')
       const userPlaylists = await spotifyService.getUserPlaylists()
+      console.log('🎵 Loaded playlists:', userPlaylists.length, userPlaylists)
       setPlaylists(userPlaylists)
     } catch (error) {
       console.error('Error loading playlists:', error)
     }
   }
 
-  const connect = () => {
-    const authUrl = spotifyService.getAuthUrl()
-    window.location.href = authUrl
+  const connect = async () => {
+    setIsLoading(true)
+    try {
+      const success = await spotifyService.connect()
+      if (success) {
+        setIsConnected(true)
+        await loadPlaylists()
+        console.log('✅ Spotify connected successfully!')
+      } else {
+        console.error('Failed to connect to Spotify')
+      }
+    } catch (error) {
+      console.error('Error connecting to Spotify:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const disconnect = () => {
-    spotifyService.disconnect()
+  const disconnect = async () => {
+    await spotifyService.disconnect()
     setIsConnected(false)
     setPlaylists([])
     setSelectedPlaylist(null)
     setIsPlaying(false)
   }
 
-  const selectPlaylist = (playlist: SpotifyPlaylist | null) => {
+  const selectPlaylist = async (playlist: SpotifyPlaylist | null) => {
     setSelectedPlaylist(playlist)
+    console.log('Selected playlist:', playlist?.name)
+    
+    // If a session is active, immediately start playing the playlist
+    if (playlist) {
+      try {
+        // Check if there's an active session by checking Chrome storage
+        const result = await chrome.storage.local.get(['currentSession', 'timerState'])
+        const currentSession = result.currentSession
+        const timerState = result.timerState
+        
+        const isSessionActive = currentSession?.isActive || timerState?.isActive
+        
+        if (isSessionActive) {
+          console.log('🎵 Session is active, starting playlist immediately:', playlist.name)
+          await spotifyService.playPlaylist(playlist.id)
+          setIsPlaying(true)
+        } else {
+          console.log('🎵 No active session, playlist will play when session starts')
+        }
+      } catch (error) {
+        console.error('Error checking session state or starting playback:', error)
+      }
+    }
   }
 
   const playSelectedPlaylist = async (): Promise<boolean> => {

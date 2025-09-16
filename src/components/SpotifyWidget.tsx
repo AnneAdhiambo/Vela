@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSpotify } from '../contexts/SpotifyContext'
 import { spotifyService, SpotifyAlbum } from '../services/spotify'
+import { getTimeBasedGreeting } from '../utils/greetings'
 
 export function SpotifyWidget() {
   const { 
@@ -16,6 +17,9 @@ export function SpotifyWidget() {
   const [featuredPlaylists, setFeaturedPlaylists] = useState<any[]>([])
   const [newReleases, setNewReleases] = useState<SpotifyAlbum[]>([])
   const [showMenu, setShowMenu] = useState(false)
+  const [showAllPlaylists, setShowAllPlaylists] = useState(false)
+  const [showAllReleases, setShowAllReleases] = useState(false)
+  const [showAllFeatured, setShowAllFeatured] = useState(false)
 
   // Load Spotify content when connected
   useEffect(() => {
@@ -38,9 +42,14 @@ export function SpotifyWidget() {
     }
   }
 
-  const handleItemClick = (item: any, type: 'playlist' | 'album' | 'track') => {
+  const handleItemClick = async (item: any, type: 'playlist' | 'album' | 'track') => {
     if (type === 'playlist') {
-      selectPlaylist(item)
+      await selectPlaylist(item)
+      console.log('🎵 Playlist selected for next session:', item.name)
+    } else if (type === 'album') {
+      // For albums, select them for the next session (don't play immediately)
+      await selectPlaylist(item) // Treat albums as playlists for selection
+      console.log('🎵 Album selected for next session:', item.name)
     }
   }
 
@@ -75,7 +84,7 @@ export function SpotifyWidget() {
           </p>
           <button 
             onClick={connect}
-            className="w-full bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg font-medium transition-colors"
+            className="w-full btn-accent py-3 px-6 rounded-lg font-medium transition-colors"
           >
             Connect to Spotify
           </button>
@@ -123,14 +132,19 @@ export function SpotifyWidget() {
       </div>
 
       <div className="max-h-96 overflow-y-auto">
-        {/* Good morning section */}
+        {/* Time-based greeting section */}
         <div className="p-4">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-semibold text-gray-900">Good morning</h4>
-            <button className="text-sm text-gray-500 hover:text-gray-700">See all</button>
+            <h4 className="font-semibold text-gray-900">{getTimeBasedGreeting()}</h4>
+            <button 
+              onClick={() => setShowAllPlaylists(!showAllPlaylists)}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              {showAllPlaylists ? 'Show less' : 'See all'}
+            </button>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            {playlists.slice(0, 3).map((playlist) => (
+            <div className={`grid gap-3 ${showAllPlaylists ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {(showAllPlaylists ? playlists : playlists.slice(0, 4)).map((playlist) => (
               <button
                 key={playlist.id}
                 onClick={() => handleItemClick(playlist, 'playlist')}
@@ -140,27 +154,57 @@ export function SpotifyWidget() {
                     : 'hover:shadow-md'
                 }`}
               >
-                <div className="aspect-square">
-                  {playlist.images[0] ? (
-                    <img 
-                      src={playlist.images[0].url} 
-                      alt={playlist.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                      <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
-                      </svg>
+                {showAllPlaylists ? (
+                  // List view for "See All"
+                  <div className="flex items-center space-x-3 p-2">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                      {playlist.images[0] ? (
+                        <img 
+                          src={playlist.images[0].url} 
+                          alt={playlist.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                          <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                  <p className="text-white text-xs font-medium truncate">{playlist.name}</p>
-                  <p className="text-white/80 text-xs truncate">
-                    {playlist.description || `${playlist.tracks.total} tracks`}
-                  </p>
-                </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-sm font-medium text-gray-900 truncate">{playlist.name}</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {playlist.description || `${playlist.tracks.total} tracks`}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  // Grid view for normal display
+                  <>
+                    <div className="aspect-square">
+                      {playlist.images[0] ? (
+                        <img 
+                          src={playlist.images[0].url} 
+                          alt={playlist.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                          <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                      <p className="text-white text-xs font-medium truncate">{playlist.name}</p>
+                      <p className="text-white/80 text-xs truncate">
+                        {playlist.description || `${playlist.tracks.total} tracks`}
+                      </p>
+                    </div>
+                  </>
+                )}
               </button>
             ))}
           </div>
@@ -171,13 +215,21 @@ export function SpotifyWidget() {
           <div className="p-4 border-t border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold text-gray-900">New releases for you</h4>
-              <button className="text-sm text-gray-500 hover:text-gray-700">See all</button>
+              <button 
+                onClick={() => setShowAllReleases(!showAllReleases)}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                {showAllReleases ? 'Show less' : 'See all'}
+              </button>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              {newReleases.slice(0, 3).map((album) => (
+            <div className={`grid gap-3 ${showAllReleases ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              {(showAllReleases ? newReleases : newReleases.slice(0, 4)).map((album) => (
                 <button
                   key={album.id}
-                  className="group text-left hover:bg-gray-50 rounded-lg p-2 transition-colors"
+                  onClick={() => handleItemClick(album, 'album')}
+                  className={`group text-left hover:bg-gray-50 rounded-lg p-2 transition-colors ${
+                    selectedPlaylist?.id === album.id ? 'bg-green-50 ring-2 ring-green-500' : ''
+                  }`}
                 >
                   <div className="aspect-square mb-2 rounded-lg overflow-hidden">
                     {album.images[0] ? (
@@ -209,15 +261,20 @@ export function SpotifyWidget() {
           <div className="p-4 border-t border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold text-gray-900">Recommended Stations</h4>
-              <button className="text-sm text-gray-500 hover:text-gray-700">See all</button>
+              <button 
+                onClick={() => setShowAllFeatured(!showAllFeatured)}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                {showAllFeatured ? 'Show less' : 'See all'}
+              </button>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              {featuredPlaylists.slice(0, 3).map((playlist) => (
+            <div className={`grid gap-3 ${showAllFeatured ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              {(showAllFeatured ? featuredPlaylists : featuredPlaylists.slice(0, 4)).map((playlist) => (
                 <button
                   key={playlist.id}
                   onClick={() => handleItemClick(playlist, 'playlist')}
                   className={`group text-left hover:bg-gray-50 rounded-lg p-2 transition-colors ${
-                    selectedPlaylist?.id === playlist.id ? 'bg-green-50' : ''
+                    selectedPlaylist?.id === playlist.id ? 'bg-green-50 ring-2 ring-green-500' : ''
                   }`}
                 >
                   <div className="aspect-square mb-2 rounded-lg overflow-hidden relative">

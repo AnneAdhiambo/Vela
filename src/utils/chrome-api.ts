@@ -2,7 +2,7 @@
 
 // Check if we're running in a Chrome extension environment
 export const isExtensionEnvironment = (): boolean => {
-  return typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id
+  return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id
 }
 
 // Mock Chrome storage for development
@@ -25,6 +25,13 @@ const mockStorage = {
   set: async (items: Record<string, any>): Promise<void> => {
     for (const [key, value] of Object.entries(items)) {
       mockStorage.data.set(key, value)
+    }
+  },
+  
+  remove: async (keys: string[] | string): Promise<void> => {
+    const keyArray = Array.isArray(keys) ? keys : [keys]
+    for (const key of keyArray) {
+      mockStorage.data.delete(key)
     }
   }
 }

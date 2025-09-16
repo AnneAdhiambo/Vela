@@ -61,6 +61,8 @@ export interface DailyStats {
   date: string // YYYY-MM-DD
   sessionsStarted: number
   sessionsCompleted: number
+  sessionsStopped: number
+  totalSessions: number
   totalFocusTime: number // minutes
   tasksCreated: number
   tasksCompleted: number

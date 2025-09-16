@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '../contexts/AppContext'
 import { chromeApi } from '../utils/chrome-api'
 
@@ -94,9 +94,9 @@ export function NotificationSettings({ isOpen, onClose }: NotificationSettingsPr
             </div>
             <button
               onClick={() => handleNotificationsToggle(!state.preferences.notificationsEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${
                 state.preferences.notificationsEnabled
-                  ? 'bg-blue-600'
+                  ? 'bg-accent'
                   : 'bg-gray-200 dark:bg-gray-700'
               }`}
               role="switch"
@@ -123,9 +123,9 @@ export function NotificationSettings({ isOpen, onClose }: NotificationSettingsPr
             <button
               onClick={() => handleSoundToggle(!state.preferences.soundEnabled)}
               disabled={!state.preferences.notificationsEnabled}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${
                 state.preferences.soundEnabled && state.preferences.notificationsEnabled
-                  ? 'bg-blue-600'
+                  ? 'bg-accent'
                   : 'bg-gray-200 dark:bg-gray-700'
               } ${
                 !state.preferences.notificationsEnabled ? 'opacity-50 cursor-not-allowed' : ''
@@ -159,7 +159,7 @@ export function NotificationSettings({ isOpen, onClose }: NotificationSettingsPr
                 disabled={!state.preferences.notificationsEnabled || isTestingNotification}
                 className={`px-3 py-1 text-sm rounded-md transition-colors ${
                   state.preferences.notificationsEnabled && !isTestingNotification
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    ? 'btn-accent'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
                 }`}
               >

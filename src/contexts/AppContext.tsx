@@ -45,6 +45,8 @@ const defaultStats: DailyStats = {
   date: new Date().toISOString().split('T')[0],
   sessionsStarted: 0,
   sessionsCompleted: 0,
+  sessionsStopped: 0,
+  totalSessions: 0,
   totalFocusTime: 0,
   tasksCreated: 0,
   tasksCompleted: 0,

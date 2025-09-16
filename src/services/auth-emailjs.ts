@@ -10,9 +10,9 @@ interface AuthResponse {
 }
 
 // EmailJS configuration
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_vela_mail'
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_vela_magic_link'
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'your_public_key'
+const EMAILJS_SERVICE_ID = (import.meta as any).env?.VITE_EMAILJS_SERVICE_ID || 'service_vela_mail'
+const EMAILJS_TEMPLATE_ID = (import.meta as any).env?.VITE_EMAILJS_TEMPLATE_ID || 'template_vela_magic_link'
+const EMAILJS_PUBLIC_KEY = (import.meta as any).env?.VITE_EMAILJS_PUBLIC_KEY || 'your_public_key'
 
 class EmailJSAuthService {
   private pendingTokens: Map<string, { email: string; createdAt: number; expiresAt: number }> = new Map()
@@ -136,9 +136,14 @@ class EmailJSAuthService {
 
       if (response.status === 200) {
         await this.saveToStorage()
-        console.log('Magic link sent successfully')
+        console.log('✅ Magic link email sent successfully!')
+        console.log('📧 Email sent to:', email)
+        console.log('🔗 Magic link:', magicLink)
+        console.log('⏰ Expires at:', new Date(expiresAt).toLocaleString())
         return true
       } else {
+        console.error('❌ EmailJS failed with status:', response.status)
+        console.error('❌ Response details:', response)
         throw new Error(`EmailJS returned status ${response.status}: ${response.text || 'Unknown error'}`)
       }
     } catch (error) {

@@ -1,38 +1,50 @@
 import { useState } from 'react'
-import { useTheme } from '../contexts/ThemeContext'
-
-interface Task {
-  id: string
-  text: string
-  completed: boolean
-}
+import { useApp } from '../contexts/AppContext'
+import { chromeApi } from '../utils/chrome-api'
+import { Task } from '../types'
 
 export function TaskList() {
-  const [tasks, setTasks] = useState<Task[]>([])
+  const { state, dispatch } = useApp()
   const [newTask, setNewTask] = useState('')
   const [isInputFocused, setIsInputFocused] = useState(false)
 
-  const toggleTask = (id: string) => {
-    setTasks(tasks.map(task => 
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ))
+  // Use tasks from AppContext
+  const tasks = state.tasks
+
+  const saveTasks = async (updatedTasks: typeof tasks) => {
+    try {
+      dispatch({ type: 'SET_TASKS', payload: updatedTasks })
+      await chromeApi.storage.local.set({ todaysTasks: updatedTasks })
+    } catch (error) {
+      console.error('Failed to save tasks:', error)
+    }
   }
 
-  const addTask = () => {
+  const toggleTask = async (id: string) => {
+    const updatedTasks = tasks.map(task => 
+      task.id === id ? { ...task, completed: !task.completed } : task
+    )
+    await saveTasks(updatedTasks)
+  }
+
+  const addTask = async () => {
     if (newTask.trim()) {
-      setTasks([...tasks, {
+      const newTaskObj: Task = {
         id: Date.now().toString(),
         text: newTask.trim(),
-        completed: false
-      }])
+        completed: false,
+        createdAt: new Date(),
+        order: tasks.length
+      }
+      const updatedTasks = [...tasks, newTaskObj]
+      await saveTasks(updatedTasks)
       setNewTask('')
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      addTask()
-    }
+  const deleteTask = async (id: string) => {
+    const updatedTasks = tasks.filter(task => task.id !== id)
+    await saveTasks(updatedTasks)
   }
 
   return (
@@ -50,13 +62,15 @@ export function TaskList() {
           </div>
         ) : (
           tasks.map((task) => (
-            <div key={task.id} className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                checked={task.completed}
-                onChange={() => toggleTask(task.id)}
-                className="w-4 h-4 text-indigo-600 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:bg-gray-700"
-              />
+            <div key={task.id} className="flex items-center space-x-3 group">
+              <label className="custom-checkbox">
+                <input
+                  type="checkbox"
+                  checked={task.completed}
+                  onChange={() => toggleTask(task.id)}
+                />
+                <span className="checkmark"></span>
+              </label>
               <span className={`flex-1 ${
                 task.completed 
                   ? 'line-through text-gray-400 dark:text-gray-500' 
@@ -64,6 +78,15 @@ export function TaskList() {
               }`}>
                 {task.text}
               </span>
+              <button
+                onClick={() => deleteTask(task.id)}
+                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all duration-200"
+                title="Delete task"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
             </div>
           ))
         )}
@@ -78,14 +101,14 @@ export function TaskList() {
           onFocus={() => setIsInputFocused(true)}
           onBlur={() => setIsInputFocused(false)}
           placeholder="Add new task"
-          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 input-accent"
         />
         
         {isInputFocused && newTask.trim() && (
           <button
             onMouseDown={(e) => e.preventDefault()} // Prevent input blur when clicking button
             onClick={addTask}
-            className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-md text-sm font-medium hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
+            className="px-4 py-2 btn-accent rounded-md text-sm font-medium transition-colors"
           >
             Add
           </button>
