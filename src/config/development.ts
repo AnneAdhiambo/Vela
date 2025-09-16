@@ -1,5 +1,5 @@
 // Development configuration for local testing
-export const isDevelopment = import.meta.env.DEV || process.env.NODE_ENV === 'development'
+export const isDevelopment = (import.meta as any).env?.DEV || process.env.NODE_ENV === 'development'
 
 export const config = {
   // Authentication settings

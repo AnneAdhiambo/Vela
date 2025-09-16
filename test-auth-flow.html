@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vela Auth Flow Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            background: #f8f9ff;
+        }
+        .step.completed {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        .step.current {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        .emoji {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        .code {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .highlight {
+            background: #fef3c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Vela Authentication Flow</h1>
+        <p>Here's how the enhanced magic link authentication works:</p>
+        
+        <div class="step completed">
+            <div><span class="emoji">1️⃣</span><strong>User enters email</strong></div>
+            <p>User types their email address and clicks "Send Magic Link"</p>
+        </div>
+        
+        <div class="step completed">
+            <div><span class="emoji">2️⃣</span><strong>Email validation</strong></div>
+            <p>Button shows "Validating email..." with spinner animation</p>
+        </div>
+        
+        <div class="step completed">
+            <div><span class="emoji">3️⃣</span><strong>Sending magic link</strong></div>
+            <p>Button shows "Sending magic link..." with spinner animation</p>
+        </div>
+        
+        <div class="step current">
+            <div><span class="emoji">4️⃣</span><strong>Success feedback</strong></div>
+            <p>Button shows "Magic link sent! ✨" with checkmark icon</p>
+        </div>
+        
+        <div class="step">
+            <div><span class="emoji">5️⃣</span><strong>Check email screen</strong></div>
+            <p>Beautiful animated screen with:</p>
+            <ul style="text-align: left; margin: 10px 0;">
+                <li>🎉 Bouncing email icon</li>
+                <li>📧 Clear instructions</li>
+                <li>⏰ Expiration timer (15 minutes)</li>
+                <li>🔍 Step-by-step guide</li>
+                <li>🔄 Try again option</li>
+            </ul>
+        </div>
+        
+        <div class="step">
+            <div><span class="emoji">6️⃣</span><strong>Email received</strong></div>
+            <p>User clicks the magic link in their email</p>
+        </div>
+        
+        <div class="step">
+            <div><span class="emoji">7️⃣</span><strong>Automatic sign-in</strong></div>
+            <p>User is automatically signed in and redirected to dashboard</p>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #f0f9ff; border-radius: 10px;">
+            <h3>✨ Enhanced Features:</h3>
+            <ul style="text-align: left;">
+                <li><span class="highlight">Step-by-step feedback</span> - Users know exactly what's happening</li>
+                <li><span class="highlight">Smooth animations</span> - Professional, polished feel</li>
+                <li><span class="highlight">Clear instructions</span> - No confusion about next steps</li>
+                <li><span class="highlight">Error handling</span> - Helpful error messages and retry options</li>
+                <li><span class="highlight">Visual feedback</span> - Icons, colors, and animations guide the user</li>
+            </ul>
+        </div>
+        
+        <div style="margin-top: 20px; font-size: 14px; color: #6b7280;">
+            <p>🎯 <strong>Result:</strong> Users have a smooth, professional authentication experience that guides them through each step!</p>
+        </div>
+    </div>
+</body>
+</html>
+

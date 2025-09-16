@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Link Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+<body>
+    <h1>Magic Link Email Test</h1>
+    <p>This page tests the magic link email sending functionality.</p>
+    
+    <form id="testForm">
+        <input type="email" id="email" placeholder="Enter email address" value="snaveqiptoo@gmail.com" required>
+        <button type="submit">Send Magic Link</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <script>
+        // EmailJS configuration
+        const EMAILJS_SERVICE_ID = 'service_b3yn4ot';
+        const EMAILJS_TEMPLATE_ID = 'template_iqo2g3r';
+        const EMAILJS_PUBLIC_KEY = 'your_public_key_here'; // Replace with actual key
+        
+        // Initialize EmailJS
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+        
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                resultDiv.innerHTML = '<p>🔄 Generating magic link...</p>';
+                
+                // First, generate magic link from server
+                const magicLinkResponse = await fetch('http://127.0.0.1:3001/api/auth/magic-link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email })
+                });
+                
+                const magicLinkData = await magicLinkResponse.json();
+                
+                if (magicLinkData.success) {
+                    resultDiv.innerHTML = '<p>✅ Magic link generated! Now sending email...</p>';
+                    
+                    // Send email using EmailJS
+                    const templateParams = {
+                        to_name: email.split('@')[0],
+                        magic_link: magicLinkData.magicLink,
+                        expiry_minutes: '15',
+                        to_email: email,
+                        email: email
+                    };
+                    
+                    const emailResponse = await emailjs.send(
+                        EMAILJS_SERVICE_ID,
+                        EMAILJS_TEMPLATE_ID,
+                        templateParams
+                    );
+                    
+                    if (emailResponse.status === 200) {
+                        resultDiv.innerHTML = `
+                            <p>✅ Magic link email sent successfully!</p>
+                            <p>📧 Email sent to: ${email}</p>
+                            <p>🔗 Magic link: <a href="${magicLinkData.magicLink}" target="_blank">${magicLinkData.magicLink}</a></p>
+                            <p>⏰ Expires at: ${new Date(magicLinkData.expiresAt).toLocaleString()}</p>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `<p>❌ EmailJS failed with status: ${emailResponse.status}</p>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<p>❌ Magic link generation failed: ${magicLinkData.error}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+                console.error('Test error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
+

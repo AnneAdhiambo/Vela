@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Chrome Extension OAuth</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; background: #1db954; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #1ed760; }
+        .code { background: #f5f5f5; padding: 10px; border-radius: 3px; font-family: monospace; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Chrome Extension OAuth Test</h1>
+    
+    <div class="section">
+        <h2>Step 1: Get Your Extension ID</h2>
+        <p>After loading your extension, you'll see an ID like: <code>abcdefghijklmnopqrstuvwxyz123456</code></p>
+        <button onclick="getExtensionId()">Get Extension ID</button>
+        <div id="extensionId" class="code"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Step 2: Get Redirect URI</h2>
+        <p>This is the URI you need to add to your Spotify app settings:</p>
+        <button onclick="getRedirectUri()">Get Redirect URI</button>
+        <div id="redirectUri" class="code"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Step 3: Test OAuth Flow</h2>
+        <p>Click this button to test the OAuth flow (make sure your extension is loaded):</p>
+        <button onclick="testOAuth()">Test OAuth</button>
+        <div id="oauthResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Step 4: Spotify App Settings</h2>
+        <p>Go to <a href="https://developer.spotify.com/dashboard" target="_blank">Spotify Developer Dashboard</a> and add this redirect URI:</p>
+        <div id="spotifyUri" class="code"></div>
+    </div>
+
+    <script>
+        function getExtensionId() {
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+                const id = chrome.runtime.id;
+                document.getElementById('extensionId').innerHTML = id;
+                document.getElementById('redirectUri').innerHTML = `https://${id}.chromiumapp.org/callback`;
+                document.getElementById('spotifyUri').innerHTML = `https://${id}.chromiumapp.org/callback`;
+            } else {
+                document.getElementById('extensionId').innerHTML = '<span class="error">Not running in extension context</span>';
+            }
+        }
+        
+        function getRedirectUri() {
+            if (typeof chrome !== 'undefined' && chrome.identity && chrome.identity.getRedirectURL) {
+                const uri = chrome.identity.getRedirectURL('callback');
+                document.getElementById('redirectUri').innerHTML = uri;
+                document.getElementById('spotifyUri').innerHTML = uri;
+            } else {
+                document.getElementById('redirectUri').innerHTML = '<span class="error">Chrome identity API not available</span>';
+            }
+        }
+        
+        function testOAuth() {
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                document.getElementById('oauthResult').innerHTML = '<span>Testing OAuth...</span>';
+                
+                chrome.runtime.sendMessage({ type: 'SPOTIFY_OAUTH' }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        document.getElementById('oauthResult').innerHTML = `<span class="error">Error: ${chrome.runtime.lastError.message}</span>`;
+                    } else if (response && response.success) {
+                        document.getElementById('oauthResult').innerHTML = '<span class="success">✅ OAuth successful! Check your extension.</span>';
+                    } else {
+                        document.getElementById('oauthResult').innerHTML = `<span class="error">OAuth failed: ${response ? response.error : 'No response'}</span>`;
+                    }
+                });
+            } else {
+                document.getElementById('oauthResult').innerHTML = '<span class="error">Not running in extension context</span>';
+            }
+        }
+        
+        // Auto-load extension ID when page loads
+        window.onload = function() {
+            getExtensionId();
+        };
+    </script>
+</body>
+</html>
+
