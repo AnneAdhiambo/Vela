@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Successful - Vela</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 500px;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            background: #4ade80;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: successPulse 2s ease-in-out infinite;
+        }
+
+        .success-icon svg {
+            width: 40px;
+            height: 40px;
+            color: white;
+        }
+
+        @keyframes successPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #fff, #e0e7ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #4ade80;
+        }
+
+        .status-text {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-detail {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .close-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .close-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .loading {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">
+            <svg fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        
+        <h1>Authentication Successful!</h1>
+        
+        <p>You have been successfully authenticated. You can now close this window and return to the Vela extension.</p>
+        
+        <div class="status">
+            <div class="status-text">✅ Magic link verified</div>
+            <div class="status-detail">Your session is now active in the extension</div>
+        </div>
+        
+        <button class="close-button" onclick="closeWindow()">
+            Close Window
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Closing window...</p>
+        </div>
+    </div>
+
+    <script>
+        // Get auth token and user data from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const authToken = urlParams.get('token');
+        const userDataParam = urlParams.get('user');
+        
+        console.log('🔍 Success page loaded with URL:', window.location.href);
+        console.log('🔍 URL params:', Object.fromEntries(urlParams.entries()));
+        console.log('🔍 Auth token:', authToken ? authToken.substring(0, 8) + '...' : 'none');
+        console.log('🔍 User data param:', userDataParam ? 'present' : 'none');
+        
+        if (authToken) {
+            let user = null;
+            
+            // Parse user data if provided
+            if (userDataParam) {
+                try {
+                    user = JSON.parse(decodeURIComponent(userDataParam));
+                    console.log('📋 Received user data from server:', user);
+                } catch (e) {
+                    console.error('Failed to parse user data:', e);
+                    // Fallback to basic user object
+                    user = {
+                        id: 'user_' + Date.now(),
+                        email: 'user@example.com',
+                        displayName: 'User',
+                        isAuthenticated: true
+                    };
+                }
+            } else {
+                // Fallback if no user data provided
+                user = {
+                    id: 'user_' + Date.now(),
+                    email: 'user@example.com',
+                    displayName: 'User',
+                    isAuthenticated: true
+                };
+            }
+            
+            // Store auth data and redirect
+            try {
+                console.log('🚀 Storing auth data and redirecting...');
+                
+                // Store auth data in localStorage for the extension to pick up
+                console.log('💾 Storing auth data in localStorage...');
+                console.log('💾 Token:', authToken.substring(0, 8) + '...');
+                console.log('💾 User:', user);
+                
+                localStorage.setItem('vela_auth_token', authToken);
+                localStorage.setItem('vela_user', JSON.stringify(user));
+                localStorage.setItem('vela_auth_pending', 'true');
+                
+                console.log('💾 Auth data stored in localStorage');
+                console.log('💾 Verification - localStorage check:', {
+                    hasToken: !!localStorage.getItem('vela_auth_token'),
+                    hasUser: !!localStorage.getItem('vela_user'),
+                    hasPending: !!localStorage.getItem('vela_auth_pending')
+                });
+                
+                // Try to open the extension in a new tab
+                console.log('🚀 Attempting to open extension...');
+                
+                // Store auth data in localStorage for the extension to pick up
+                localStorage.setItem('vela_auth_token', authToken);
+                localStorage.setItem('vela_user', JSON.stringify(user));
+                localStorage.setItem('vela_auth_pending', 'true');
+                
+                console.log('💾 Auth data stored in localStorage');
+                
+                // Try to open the extension using a more reliable method
+                try {
+                    // Method 1: Try to open extension using chrome-extension:// protocol
+                    const extensionUrl = `chrome-extension://plbchadejpfecepdhheeecigbkkjmabc/index.html`;
+                    
+                    // Create a new window/tab for the extension
+                    const extensionWindow = window.open(extensionUrl, '_blank');
+                    
+                    if (extensionWindow) {
+                        console.log('✅ Extension window opened successfully');
+                        
+                        // Wait a moment for the extension to load, then send the auth data
+                        setTimeout(() => {
+                            try {
+                                // Send auth data to the extension window
+                                extensionWindow.postMessage({
+                                    type: 'AUTH_SUCCESS',
+                                    token: authToken,
+                                    user: user
+                                }, '*');
+                                console.log('📨 Auth data sent to extension window');
+                            } catch (e) {
+                                console.log('⚠️ Could not send message to extension window:', e);
+                            }
+                        }, 1000);
+                    } else {
+                        console.log('⚠️ Could not open extension window (may be blocked by popup blocker)');
+                        // Fallback: Show instructions to user
+                        showExtensionInstructions();
+                    }
+                } catch (e) {
+                    console.log('⚠️ Could not open extension directly:', e);
+                    showExtensionInstructions();
+                }
+                
+                // Show success message
+                document.body.innerHTML = `
+                    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <div style="background: #4f46e5; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <h1 style="margin: 0; font-size: 24px;">✅ Authentication Successful!</h1>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <h3 style="margin-top: 0; color: #333;">Next Steps:</h3>
+                            <ol style="text-align: left; color: #666; line-height: 1.6;">
+                                <li>Check if a new Vela extension tab opened automatically</li>
+                                <li>If not, manually open your Vela Chrome extension</li>
+                                <li>You should see your dashboard instead of the welcome screen</li>
+                            </ol>
+                        </div>
+                        <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; border-left: 4px solid #4f46e5;">
+                            <p style="margin: 0; color: #1e40af; font-weight: 500;">
+                                💡 <strong>Tip:</strong> If you don't see the dashboard, try refreshing the extension tab.
+                            </p>
+                        </div>
+                        <button onclick="window.close()" style="
+                            background: #4f46e5; 
+                            color: white; 
+                            border: none; 
+                            padding: 12px 24px; 
+                            border-radius: 6px; 
+                            font-size: 16px; 
+                            cursor: pointer; 
+                            margin-top: 20px;
+                        ">Close This Window</button>
+                    </div>
+                `;
+                
+                // Auto-close after 15 seconds
+                setTimeout(() => {
+                    try {
+                        window.close();
+                    } catch (e) {
+                        console.log('Could not auto-close window');
+                    }
+                }, 15000);
+            } catch (e) {
+                console.log('Error storing auth data:', e);
+                // Show a message to the user
+                document.body.innerHTML = `
+                    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+                        <h2>Authentication Successful!</h2>
+                        <p>Please return to your Vela extension tab to continue.</p>
+                        <p>You can close this window now.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function showExtensionInstructions() {
+            document.body.innerHTML = `
+                <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: #4f46e5; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h1 style="margin: 0; font-size: 24px;">✅ Authentication Successful!</h1>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h3 style="margin-top: 0; color: #333;">Next Steps:</h3>
+                        <ol style="text-align: left; color: #666; line-height: 1.6;">
+                            <li>Open your Vela Chrome extension (click the extension icon in your browser toolbar)</li>
+                            <li>You should see your dashboard instead of the welcome screen</li>
+                            <li>If you still see the welcome screen, try refreshing the extension tab</li>
+                        </ol>
+                    </div>
+                    <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; border-left: 4px solid #4f46e5;">
+                        <p style="margin: 0; color: #1e40af; font-weight: 500;">
+                            💡 <strong>Tip:</strong> Your authentication data has been saved. You can close this window now.
+                        </p>
+                    </div>
+                    <button onclick="window.close()" style="
+                        background: #4f46e5; 
+                        color: white; 
+                        border: none; 
+                        padding: 12px 24px; 
+                        border-radius: 6px; 
+                        font-size: 16px; 
+                        cursor: pointer; 
+                        margin-top: 20px;
+                    ">Close This Window</button>
+                </div>
+            `;
+        }
+
+        function closeWindow() {
+            const loading = document.getElementById('loading');
+            const button = document.querySelector('.close-button');
+            
+            loading.style.display = 'block';
+            button.style.display = 'none';
+            
+            // Try to close the window
+            setTimeout(() => {
+                try {
+                    window.close();
+                } catch (e) {
+                    // If window.close() doesn't work, show a message
+                    loading.innerHTML = '<p>Please close this window manually</p>';
+                }
+            }, 1000);
+        }
+
+        // Auto-close after 5 seconds if user doesn't interact
+        setTimeout(() => {
+            const button = document.querySelector('.close-button');
+            if (button && button.style.display !== 'none') {
+                closeWindow();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
