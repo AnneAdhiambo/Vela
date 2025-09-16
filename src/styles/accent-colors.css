@@ -1,0 +1,213 @@
+/* Accent Color Utilities */
+/* These classes use CSS custom properties set by the ThemeContext */
+
+/* Primary accent colors */
+.bg-accent {
+  background-color: var(--accent-primary);
+}
+
+.text-accent {
+  color: var(--accent-primary);
+}
+
+.border-accent {
+  border-color: var(--accent-primary);
+}
+
+.ring-accent {
+  --tw-ring-color: var(--accent-primary);
+}
+
+/* Hover states */
+.hover\:bg-accent:hover {
+  background-color: var(--accent-hover);
+}
+
+.hover\:text-accent:hover {
+  color: var(--accent-hover);
+}
+
+.hover\:border-accent:hover {
+  border-color: var(--accent-hover);
+}
+
+/* Light variants for backgrounds */
+.bg-accent-light {
+  background-color: var(--accent-light);
+}
+
+.bg-accent-light\/20 {
+  background-color: color-mix(in srgb, var(--accent-primary) 20%, transparent);
+}
+
+/* Dark variants */
+.bg-accent-dark {
+  background-color: var(--accent-dark);
+}
+
+.text-accent-dark {
+  color: var(--accent-dark);
+}
+
+/* Focus states */
+.focus\:ring-accent:focus {
+  --tw-ring-color: var(--accent-primary);
+}
+
+.focus\:border-accent:focus {
+  border-color: var(--accent-primary);
+}
+
+/* Button variants */
+.btn-accent {
+  background-color: var(--accent-primary);
+  color: white;
+  transition: background-color 0.2s ease;
+}
+
+.btn-accent:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn-accent-outline {
+  background-color: transparent;
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  transition: all 0.2s ease;
+}
+
+.btn-accent-outline:hover {
+  background-color: var(--accent-primary);
+  color: white;
+}
+
+.btn-accent-ghost {
+  background-color: transparent;
+  color: var(--accent-primary);
+  transition: all 0.2s ease;
+}
+
+.btn-accent-ghost:hover {
+  background-color: var(--accent-light);
+}
+
+/* Input focus states */
+.input-accent:focus {
+  border-color: var(--accent-primary);
+  --tw-ring-color: var(--accent-primary);
+  outline: none;
+}
+
+/* Progress bars */
+.progress-accent {
+  background-color: var(--accent-primary);
+}
+
+/* Custom Checkbox Styling */
+.custom-checkbox {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.custom-checkbox input[type="checkbox"] {
+  opacity: 0;
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.custom-checkbox .checkmark {
+  position: relative;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: transparent;
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.custom-checkbox:hover .checkmark {
+  border-color: var(--accent-primary);
+  transform: scale(1.05);
+}
+
+.custom-checkbox input[type="checkbox"]:checked + .checkmark {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  transform: scale(1.1);
+}
+
+.custom-checkbox input[type="checkbox"]:checked + .checkmark:after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  animation: checkmark 0.3s ease;
+}
+
+.custom-checkbox input[type="checkbox"]:focus + .checkmark {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 20%, transparent);
+}
+
+@keyframes checkmark {
+  0% {
+    transform: rotate(45deg) scale(0);
+  }
+  50% {
+    transform: rotate(45deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(45deg) scale(1);
+  }
+}
+
+/* Legacy checkbox support */
+.checkbox-accent:checked {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.radio-accent:checked {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+/* Toggle switches */
+.toggle-accent:checked {
+  background-color: var(--accent-primary);
+}
+
+/* Links */
+.link-accent {
+  color: var(--accent-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.link-accent:hover {
+  color: var(--accent-hover);
+}
+
+/* Badges and tags */
+.badge-accent {
+  background-color: var(--accent-light);
+  color: var(--accent-dark);
+  border: 1px solid var(--accent-primary);
+}
+
+/* Gradients */
+.gradient-accent {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+}
+
+.gradient-accent-light {
+  background: linear-gradient(135deg, var(--accent-light), var(--accent-primary));
+}
