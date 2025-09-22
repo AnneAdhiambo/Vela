@@ -1,120 +1,182 @@
 'use client'
 
-import { useState } from 'react'
-import { Mail, CheckCircle, AlertCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Mail, CheckCircle } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { initEmailJS, sendNewsletterWelcome } from '@/lib/emailjs'
 
 export default function Newsletter() {
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-  const [message, setMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [error, setError] = useState('')
+  const [emailSent, setEmailSent] = useState(false)
+
+  // Initialize EmailJS on component mount
+  useEffect(() => {
+    initEmailJS()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStatus('loading')
+    setIsSubmitting(true)
+    setError('')
 
     try {
-      // This would integrate with Supabase for magic link signup
-      // For now, we'll simulate the API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Validate email
+      if (!email.trim()) {
+        setError('Please enter your email address')
+        return
+      }
+
+      if (!/\S+@\S+\.\S+/.test(email)) {
+        setError('Please enter a valid email address')
+        return
+      }
+
+      // Check if email already exists in subscribers
+      const { data: existingSubscriber, error: checkError } = await supabase
+        .from('subscribers')
+        .select('email')
+        .eq('email', email)
+        .single()
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError
+      }
+
+      if (existingSubscriber) {
+        setError('This email is already subscribed to our newsletter!')
+        return
+      }
+
+      // Add to subscribers
+      const { data: insertData, error: insertError } = await supabase
+        .from('subscribers')
+        .insert([
+          {
+            email: email.trim(),
+            status: 'active',
+            subscription_type: 'weekly'
+          }
+        ])
+        .select()
+
+      if (insertError) {
+        throw insertError
+      }
       
-      // Simulate success
-      setStatus('success')
-      setMessage('Check your email for a magic link to complete signup!')
-      setEmail('')
-    } catch (error) {
-      setStatus('error')
-      setMessage('Something went wrong. Please try again.')
+      // Send welcome email
+      const emailSuccess = await sendNewsletterWelcome(email.trim())
+      
+      if (emailSuccess) {
+        setEmailSent(true)
+      }
+      
+      setIsSubmitted(true)
+    } catch (err) {
+      console.error('❌ Error subscribing to newsletter:', err)
+      setError(`Something went wrong: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  return (
-    <section className="py-20 bg-gradient-to-br from-blue-600 to-purple-700">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        {/* Header */}
-        <div className="mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Stay Updated with Vela
+  if (isSubmitted) {
+    return (
+      <section className="py-16" style={{ backgroundColor: '#f8f6ff' }}>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: '#e8e0ff' }}>
+            <CheckCircle className="w-8 h-8" style={{ color: '#9046ff' }} />
+          </div>
+          
+          <h2 className="text-3xl font-bold text-gray-900 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            You're subscribed! 🎉
           </h2>
-          <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-            Get productivity tips, feature updates, and exclusive content delivered to your inbox. 
-            Join our community of focused professionals.
+          
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            Thank you for subscribing to our weekly newsletter! 
+            {emailSent ? ' Check your inbox for a welcome email.' : ' You\'ll receive productivity tips, updates about Vela, and exclusive content every week.'}
+          </p>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="py-16" style={{ backgroundColor: '#f8f6ff' }}>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: '#e8e0ff' }}>
+            <Mail className="w-8 h-8" style={{ color: '#9046ff' }} />
+          </div>
+          
+          <h2 className="text-3xl font-bold text-gray-900 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            Stay Updated
+          </h2>
+          
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            Get weekly productivity tips, Vela updates, and exclusive content delivered to your inbox.
           </p>
         </div>
 
-        {/* Newsletter Form */}
-        <div className="max-w-md mx-auto">
-          {status === 'success' ? (
-            <div className="bg-green-100 border border-green-200 rounded-lg p-6">
-              <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-green-800 mb-2">
-                Almost there!
-              </h3>
-              <p className="text-green-700">
-                {message}
-              </p>
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl mx-auto">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="newsletter-email" className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="newsletter-email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent transition-colors"
+                style={{ 
+                  fontFamily: 'Manrope, sans-serif',
+                  '--tw-ring-color': '#9046ff'
+                } as React.CSSProperties}
+                placeholder="Enter your email address"
+                required
+                disabled={isSubmitting}
+              />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email address"
-                    required
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={status === 'loading'}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={status === 'loading'}
-                  className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {status === 'loading' ? (
-                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Mail className="w-5 h-5 mr-2" />
-                      Subscribe
-                    </>
-                  )}
-                </button>
+
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600" style={{ fontFamily: 'Manrope, sans-serif' }}>{error}</p>
               </div>
+            )}
 
-              {status === 'error' && (
-                <div className="flex items-center justify-center text-red-200 text-sm">
-                  <AlertCircle className="w-4 h-4 mr-2" />
-                  {message}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ 
+                backgroundColor: '#9046ff',
+                fontFamily: 'Manrope, sans-serif'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#7c3aed'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#9046ff'
+              }}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Subscribing...
                 </div>
+              ) : (
+                'Subscribe to Newsletter'
               )}
-            </form>
-          )}
+            </button>
+          </form>
 
-          {/* Privacy Note */}
-          <p className="text-blue-200 text-sm mt-4">
-            We respect your privacy. Unsubscribe at any time.
+          <p className="text-sm text-gray-500 mt-4 text-center" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            No spam, unsubscribe at any time. We respect your privacy.
           </p>
-        </div>
-
-        {/* Benefits */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-16 text-center">
-          <div>
-            <div className="text-2xl mb-2">📊</div>
-            <h4 className="font-semibold text-white mb-1">Productivity Tips</h4>
-            <p className="text-blue-200 text-sm">Weekly insights to boost your focus</p>
-          </div>
-          <div>
-            <div className="text-2xl mb-2">🚀</div>
-            <h4 className="font-semibold text-white mb-1">Feature Updates</h4>
-            <p className="text-blue-200 text-sm">Be first to know about new features</p>
-          </div>
-          <div>
-            <div className="text-2xl mb-2">👥</div>
-            <h4 className="font-semibold text-white mb-1">Community</h4>
-            <p className="text-blue-200 text-sm">Connect with like-minded professionals</p>
-          </div>
         </div>
       </div>
     </section>

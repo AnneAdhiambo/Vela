@@ -6,9 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "create-admin": "node scripts/create-admin.js",
+    "admin:create": "node scripts/create-admin.js create",
+    "admin:list": "node scripts/create-admin.js list",
+    "admin:delete": "node scripts/create-admin.js delete"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@supabase/supabase-js": "^2.38.5",
     "lucide-react": "^0.294.0",
     "next": "14.0.4",

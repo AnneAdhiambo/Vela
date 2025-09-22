@@ -1,9 +1,9 @@
 // Polar API configuration and utilities
 export const POLAR_CONFIG = {
   apiUrl: 'https://api.polar.sh/v1',
-  accessToken: process.env.POLAR_ACCESS_TOKEN!,
-  productId: 'vela-premium', // This would be your actual product ID from Polar
-  successUrl: process.env.POLAR_SUCCESS_URL!,
+  accessToken: process.env.POLAR_ACCESS_TOKEN,
+  productId: process.env.POLAR_PRODUCT_ID || 'vela-premium',
+  successUrl: process.env.POLAR_SUCCESS_URL,
   cancelUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/#pricing`,
 }
 

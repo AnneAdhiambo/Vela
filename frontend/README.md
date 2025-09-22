@@ -4,22 +4,24 @@ This is the marketing website for Vela, a Chrome extension that transforms your 
 
 ## Features
 
-- **Hero Section**: Compelling headline with Chrome Web Store CTA
-- **Features Grid**: Showcases core app functionality
-- **How It Works**: 3-step onboarding flow
-- **Testimonials**: Social proof and trust badges
-- **Premium Pricing**: Subscription plans with Polar integration
-- **Newsletter Signup**: Supabase magic-link authentication
-- **Legal Pages**: Privacy policy and terms of service
+- 🎨 **Modern Design** - Clean, professional UI with Manrope font and purple theme
+- 📧 **Waitlist System** - Collect user interest with Supabase integration
+- 📰 **Newsletter Signup** - Weekly newsletter subscription with EmailJS
+- 🔐 **Admin Dashboard** - Protected admin panel for managing users
+- 💳 **Payment Integration** - Polar.sh integration for premium features
+- 📱 **Responsive** - Mobile-first design that works on all devices
+- 🚀 **Chrome Extension** - Landing page for Vela Chrome extension
 
 ## Tech Stack
 
 - **Framework**: Next.js 14 with App Router
 - **Styling**: Tailwind CSS
+- **Database**: Supabase
+- **Email**: EmailJS
+- **Payments**: Polar.sh
 - **Icons**: Lucide React
-- **Authentication**: Supabase (for newsletter)
+- **Font**: Manrope (Google Fonts)
 - **Deployment**: Vercel
-- **Analytics**: Ready for Plausible/GA integration
 
 ## Getting Started
 
@@ -39,10 +41,44 @@ npm run dev
 
 Create a `.env.local` file with:
 
+```bash
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
+NEXT_PUBLIC_SUPABASE_ANON_TOKEN=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+
+# EmailJS Configuration (optional)
+NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=your_emailjs_public_key_here
+
+# Polar.sh Configuration (optional)
+POLAR_ACCESS_TOKEN=your_polar_access_token_here
+POLAR_PRODUCT_ID=your_polar_product_id_here
+POLAR_SUCCESS_URL=your_success_url_here
+
+# Site Configuration
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+## Admin Commands
+
+```bash
+# Create admin user
+npm run admin:create -- --email admin@example.com --password mypassword123
+
+# List admin users
+npm run admin:list
+
+# Delete admin user
+npm run admin:delete -- --email admin@example.com
 ```
+
+## Admin Dashboard
+
+Access the admin dashboard at `/admin` with your admin credentials to:
+- View waitlist entries
+- Manage newsletter subscribers
+- Update user statuses
+- View analytics
 
 ## Deployment
 

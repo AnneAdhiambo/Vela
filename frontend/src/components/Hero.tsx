@@ -5,8 +5,8 @@ import Image from 'next/image'
 
 export default function Hero() {
   const handleAddToChrome = () => {
-    // This would link to the Chrome Web Store
-    window.open('https://chrome.google.com/webstore', '_blank')
+    // Scroll to waitlist section
+    document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const handleWatchDemo = () => {
@@ -15,26 +15,26 @@ export default function Hero() {
   }
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <section className="relative overflow-hidden" style={{ backgroundColor: '#f8f6ff' }}>
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 sm:pt-24 sm:pb-20">
         <div className="text-center">
           {/* Badge */}
-          <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mb-8">
+          <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-8" style={{ backgroundColor: '#e8e0ff', color: '#9046ff', fontFamily: 'Manrope, sans-serif' }}>
             <Chrome className="w-4 h-4 mr-2" />
-            Chrome Extension • Free to Install
+            Chrome Extension • Join Waitlist for Early Access
           </div>
 
           {/* Headline */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-6">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-6" style={{ fontFamily: 'Manrope, sans-serif' }}>
             Transform Your
-            <span className="gradient-text block">New Tab</span>
+            <span className="block" style={{ color: '#9046ff' }}>New Tab</span>
             Into a Productivity Hub
           </h1>
 
           {/* Subheadline */}
-          <p className="text-xl sm:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl sm:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>
             Replace your default new tab with a beautiful focus timer, task manager, and progress tracker. 
             Turn every browser moment into a productivity opportunity.
           </p>
@@ -43,16 +43,27 @@ export default function Hero() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
             <button
               onClick={handleAddToChrome}
-              className="inline-flex items-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
+              className="inline-flex items-center px-8 py-4 text-white font-semibold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
+              style={{ 
+                backgroundColor: '#9046ff',
+                fontFamily: 'Manrope, sans-serif'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#7c3aed'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#9046ff'
+              }}
             >
               <Chrome className="w-5 h-5 mr-2" />
-              Add to Chrome - Free
+              Join Waitlist - Coming Soon
               <ArrowRight className="w-5 h-5 ml-2" />
             </button>
             
             <button 
               onClick={handleWatchDemo}
               className="inline-flex items-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-lg border-2 border-gray-200 transition-colors duration-200"
+              style={{ fontFamily: 'Manrope, sans-serif' }}
             >
               <Play className="w-5 h-5 mr-2" />
               Watch Demo
@@ -75,19 +86,19 @@ export default function Hero() {
             </div>
             
             {/* Floating elements */}
-            <div className="absolute -top-4 -left-4 w-20 h-20 bg-blue-200 rounded-full opacity-20 animate-pulse"></div>
-            <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-purple-200 rounded-full opacity-20 animate-pulse delay-1000"></div>
+            <div className="absolute -top-4 -left-4 w-20 h-20 rounded-full opacity-20 animate-pulse" style={{ backgroundColor: '#e8e0ff' }}></div>
+            <div className="absolute -bottom-4 -right-4 w-32 h-32 rounded-full opacity-20 animate-pulse delay-1000" style={{ backgroundColor: '#d4c2ff' }}></div>
           </div>
 
           {/* Social Proof */}
           <div className="mt-16 text-center">
-            <p className="text-gray-500 text-sm mb-4">Trusted by productive professionals</p>
+            <p className="text-gray-500 text-sm mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>Join thousands of productive professionals</p>
             <div className="flex justify-center items-center space-x-8 opacity-60">
-              <div className="text-gray-400 font-semibold">1000+ Users</div>
+              <div className="text-gray-400 font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>500+ Waitlist</div>
               <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-              <div className="text-gray-400 font-semibold">⭐ 4.9 Rating</div>
+              <div className="text-gray-400 font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>🚀 Coming Soon</div>
               <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-              <div className="text-gray-400 font-semibold">Chrome Web Store</div>
+              <div className="text-gray-400 font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>Chrome Extension</div>
             </div>
           </div>
         </div>

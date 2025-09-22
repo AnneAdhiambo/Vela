@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Manrope } from 'next/font/google'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
+const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' })
 
 export const metadata: Metadata = {
   title: 'Vela - Transform Your New Tab Into a Productivity Hub',
@@ -59,7 +60,7 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="128x128" href="/icon128.png" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={`${inter.className} ${manrope.variable}`}>{children}</body>
     </html>
   )
 }

@@ -33,16 +33,12 @@ export default function Footer() {
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <div className="flex items-center mb-4">
-              <Image
-                src="/icon32.png"
-                alt="Vela Logo"
-                width={32}
-                height={32}
-                className="w-8 h-8 mr-3"
-              />
-              <span className="text-xl font-bold">Vela</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style={{ backgroundColor: '#9046ff' }}>
+                <span className="text-white font-bold text-sm">V</span>
+              </div>
+              <span className="text-xl font-bold" style={{ fontFamily: 'Manrope, sans-serif' }}>Vela</span>
             </div>
-            <p className="text-gray-400 mb-6 max-w-md">
+            <p className="text-gray-400 mb-6 max-w-md" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Transform your new tab into a productivity hub. Focus better, accomplish more, 
               and build lasting habits with Vela.
             </p>
@@ -63,11 +59,11 @@ export default function Footer() {
 
           {/* Product Links */}
           <div>
-            <h3 className="font-semibold mb-4">Product</h3>
+            <h3 className="font-semibold mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>Product</h3>
             <ul className="space-y-3">
               {footerLinks.product.map((link) => (
                 <li key={link.name}>
-                  <a href={link.href} className="text-gray-400 hover:text-white transition-colors">
+                  <a href={link.href} className="text-gray-400 hover:text-white transition-colors" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     {link.name}
                   </a>
                 </li>
@@ -77,11 +73,11 @@ export default function Footer() {
 
           {/* Support Links */}
           <div>
-            <h3 className="font-semibold mb-4">Support</h3>
+            <h3 className="font-semibold mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>Support</h3>
             <ul className="space-y-3">
               {footerLinks.support.map((link) => (
                 <li key={link.name}>
-                  <a href={link.href} className="text-gray-400 hover:text-white transition-colors">
+                  <a href={link.href} className="text-gray-400 hover:text-white transition-colors" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     {link.name}
                   </a>
                 </li>
@@ -91,11 +87,11 @@ export default function Footer() {
 
           {/* Legal Links */}
           <div>
-            <h3 className="font-semibold mb-4">Legal</h3>
+            <h3 className="font-semibold mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>Legal</h3>
             <ul className="space-y-3">
               {footerLinks.legal.map((link) => (
                 <li key={link.name}>
-                  <a href={link.href} className="text-gray-400 hover:text-white transition-colors">
+                  <a href={link.href} className="text-gray-400 hover:text-white transition-colors" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     {link.name}
                   </a>
                 </li>
@@ -107,12 +103,12 @@ export default function Footer() {
         {/* Bottom Section */}
         <div className="border-t border-gray-800 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-400 text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>
               © 2025 Vela. All rights reserved.
             </p>
             
             <div className="flex items-center space-x-6 mt-4 md:mt-0">
-              <div className="flex items-center text-sm text-gray-400">
+              <div className="flex items-center text-sm text-gray-400" style={{ fontFamily: 'Manrope, sans-serif' }}>
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                 All systems operational
               </div>
@@ -120,6 +116,7 @@ export default function Footer() {
               <a 
                 href="#" 
                 className="text-sm text-gray-400 hover:text-white transition-colors"
+                style={{ fontFamily: 'Manrope, sans-serif' }}
               >
                 Status Page
               </a>
