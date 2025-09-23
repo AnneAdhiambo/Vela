@@ -65,10 +65,10 @@ export default function Testimonials() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
             Loved by Productive People
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto" style={{ fontFamily: 'Manrope, sans-serif' }}>
             Join thousands of professionals who have transformed their productivity with Vela.
           </p>
         </div>
@@ -91,22 +91,22 @@ export default function Testimonials() {
               </div>
 
               {/* Testimonial Text */}
-              <p className="text-gray-700 mb-6 leading-relaxed">
+              <p className="text-gray-700 mb-6 leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>
                 "{testimonial.text}"
               </p>
 
               {/* Author */}
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-blue-600 font-semibold text-sm">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: '#f8f6ff' }}>
+                  <span className="font-semibold text-sm" style={{ color: '#9046ff', fontFamily: 'Manrope, sans-serif' }}>
                     {testimonial.avatar}
                   </span>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="font-semibold text-gray-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     {testimonial.name}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     {testimonial.role} • {testimonial.company}
                   </div>
                 </div>
@@ -116,26 +116,31 @@ export default function Testimonials() {
         </div>
 
         {/* Trust Badges */}
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
           <div className="text-center mb-8">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-2xl font-bold text-gray-900 mb-3" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Trusted Across Platforms
             </h3>
-            <p className="text-gray-600">
-              Consistently rated as one of the best productivity extensions
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Consistently rated as one of the best productivity extensions by users worldwide
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {trustBadges.map((badge, index) => (
-              <div key={index} className="text-center">
-                <div className="text-2xl font-bold text-gray-900 mb-1">
+              <div key={index} className="text-center p-6 rounded-xl hover:bg-gray-50 transition-colors duration-200">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#f8f6ff' }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#9046ff' }}>
+                    <Star className="w-4 h-4 text-white fill-current" />
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
                   {badge.rating}
                 </div>
-                <div className="text-sm font-medium text-gray-700 mb-1">
+                <div className="text-lg font-semibold text-gray-800 mb-1" style={{ fontFamily: 'Manrope, sans-serif' }}>
                   {badge.name}
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-gray-600" style={{ fontFamily: 'Manrope, sans-serif' }}>
                   {badge.users}
                 </div>
               </div>

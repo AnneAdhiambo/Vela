@@ -61,14 +61,14 @@ export default function Premium() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium mb-4">
+          <div className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
             <Crown className="w-4 h-4 mr-2" />
             Premium Features
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
             Unlock Your Full Potential
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto" style={{ fontFamily: 'Manrope, sans-serif' }}>
             Get advanced features and insights to supercharge your productivity journey.
           </p>
         </div>
@@ -78,48 +78,48 @@ export default function Premium() {
           {/* Free Plan */}
           <div className="bg-gray-50 rounded-2xl p-8 border border-gray-200">
             <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
-              <div className="text-4xl font-bold text-gray-900 mb-2">$0</div>
-              <p className="text-gray-600">Perfect for getting started</p>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>Free</h3>
+              <div className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>$0</div>
+              <p className="text-gray-600" style={{ fontFamily: 'Manrope, sans-serif' }}>Perfect for getting started</p>
             </div>
 
             <ul className="space-y-4 mb-8">
               {freeFeatures.map((feature, index) => (
                 <li key={index} className="flex items-center">
                   <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                  <span className="text-gray-700">{feature}</span>
+                  <span className="text-gray-700" style={{ fontFamily: 'Manrope, sans-serif' }}>{feature}</span>
                 </li>
               ))}
             </ul>
 
-            <button className="w-full py-3 px-6 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+            <button className="w-full py-3 px-6 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Current Plan
             </button>
           </div>
 
           {/* Premium Plan */}
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 border-2 border-blue-200 relative">
+          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-8 border-2 relative" style={{ borderColor: '#e8e0ff' }}>
             {/* Popular Badge */}
             <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-              <div className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium">
+              <div className="text-white px-4 py-2 rounded-full text-sm font-medium" style={{ backgroundColor: '#9046ff', fontFamily: 'Manrope, sans-serif' }}>
                 Most Popular
               </div>
             </div>
 
             <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Premium</h3>
-              <div className="text-4xl font-bold text-gray-900 mb-2">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>Premium</h3>
+              <div className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
                 $4.99
                 <span className="text-lg text-gray-600 font-normal">/month</span>
               </div>
-              <p className="text-gray-600">For serious productivity enthusiasts</p>
+              <p className="text-gray-600" style={{ fontFamily: 'Manrope, sans-serif' }}>For serious productivity enthusiasts</p>
             </div>
 
             <ul className="space-y-4 mb-8">
               {[...freeFeatures, ...premiumFeatures].map((feature, index) => (
                 <li key={index} className="flex items-center">
                   <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                  <span className={`${index >= freeFeatures.length ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
+                  <span className={`${index >= freeFeatures.length ? 'text-gray-900 font-medium' : 'text-gray-700'}`} style={{ fontFamily: 'Manrope, sans-serif' }}>
                     {feature}
                   </span>
                 </li>
@@ -129,7 +129,21 @@ export default function Premium() {
             <button
               onClick={handleUpgrade}
               disabled={isLoading}
-              className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
+              className="w-full py-3 px-6 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center"
+              style={{ 
+                backgroundColor: '#9046ff',
+                fontFamily: 'Manrope, sans-serif'
+              }}
+              onMouseEnter={(e) => {
+                if (!isLoading) {
+                  e.currentTarget.style.backgroundColor = '#7c3aed'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isLoading) {
+                  e.currentTarget.style.backgroundColor = '#9046ff'
+                }
+              }}
             >
               <Zap className="w-5 h-5 mr-2" />
               {isLoading ? 'Processing...' : 'Upgrade to Premium'}
@@ -139,7 +153,7 @@ export default function Premium() {
 
         {/* Money Back Guarantee */}
         <div className="text-center mt-12">
-          <p className="text-gray-600">
+          <p className="text-gray-600" style={{ fontFamily: 'Manrope, sans-serif' }}>
             30-day money-back guarantee • Cancel anytime • No hidden fees
           </p>
         </div>

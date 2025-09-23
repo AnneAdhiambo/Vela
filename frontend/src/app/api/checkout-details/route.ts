@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch checkout details from Polar
-    const checkout = await polar.getCheckout(checkoutId)
+    // Fetch checkout details using official Polar SDK
+    const checkout = await polar.checkouts.get(checkoutId)
 
     if (!checkout) {
       return NextResponse.json(
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       amount: checkout.amount,
       currency: checkout.currency,
       customerEmail: checkout.customer?.email,
-      createdAt: checkout.createdAt,
+      createdAt: checkout.created_at,
     })
   } catch (error) {
     console.error('Error fetching checkout details:', error)

@@ -23,6 +23,12 @@ This is the marketing website for Vela, a Chrome extension that transforms your 
 - **Font**: Manrope (Google Fonts)
 - **Deployment**: Vercel
 
+## 📚 Documentation
+
+- **[Setup Guide](./SETUP_GUIDE.md)** - Complete setup instructions with database setup, EmailJS configuration, and more
+- **[Admin Commands](./ADMIN_COMMANDS.md)** - Admin user management commands
+- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)** - Deployment instructions for Vercel, Netlify, and Docker
+
 ## Getting Started
 
 1. Install dependencies:
@@ -36,6 +42,8 @@ npm run dev
 ```
 
 3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+> **Note**: For complete setup instructions including database configuration, see the [Setup Guide](./SETUP_GUIDE.md).
 
 ## Environment Variables
 

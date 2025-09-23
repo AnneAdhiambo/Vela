@@ -43,7 +43,7 @@ export default function Hero() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
             <button
               onClick={handleAddToChrome}
-              className="inline-flex items-center px-8 py-4 text-white font-semibold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
+              className="inline-flex items-center px-8 py-4 text-white font-semibold rounded-lg transition-colors duration-200"
               style={{ 
                 backgroundColor: '#9046ff',
                 fontFamily: 'Manrope, sans-serif'
@@ -92,13 +92,13 @@ export default function Hero() {
 
           {/* Social Proof */}
           <div className="mt-16 text-center">
-            <p className="text-gray-500 text-sm mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>Join thousands of productive professionals</p>
-            <div className="flex justify-center items-center space-x-8 opacity-60">
-              <div className="text-gray-400 font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>500+ Waitlist</div>
-              <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-              <div className="text-gray-400 font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>🚀 Coming Soon</div>
-              <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-              <div className="text-gray-400 font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>Chrome Extension</div>
+            <p className="text-gray-600 text-sm mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>Join thousands of productive professionals</p>
+            <div className="flex justify-center items-center space-x-8">
+              <div className="text-gray-700 font-semibold text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>500+ Waitlist</div>
+              <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+              <div className="text-gray-700 font-semibold text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>🚀 Coming Soon</div>
+              <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+              <div className="text-gray-700 font-semibold text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>Chrome Extension</div>
             </div>
           </div>
         </div>

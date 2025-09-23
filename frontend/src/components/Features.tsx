@@ -83,7 +83,19 @@ export default function Features() {
 
         {/* Bottom CTA */}
         <div className="text-center mt-16">
-          <div className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 cursor-pointer">
+          <div 
+            className="inline-flex items-center px-6 py-3 text-white font-semibold rounded-lg transition-all duration-200 cursor-pointer"
+            style={{ 
+              backgroundColor: '#9046ff',
+              fontFamily: 'Manrope, sans-serif'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#7c3aed'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#9046ff'
+            }}
+          >
             See All Features in Action
           </div>
         </div>
