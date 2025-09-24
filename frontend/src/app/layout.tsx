@@ -6,6 +6,7 @@ const inter = Inter({ subsets: ['latin'] })
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   title: 'Vela - Transform Your New Tab Into a Productivity Hub',
   description: 'A beautiful Chrome extension that replaces your new tab with a focus timer, task manager, and productivity dashboard. Boost your focus with Pomodoro sessions, track your progress, and stay motivated.',
   keywords: 'productivity, chrome extension, pomodoro timer, task manager, focus, new tab, time tracking',
