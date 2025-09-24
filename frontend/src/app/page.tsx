@@ -4,6 +4,7 @@ import Features from '@/components/Features'
 import HowItWorks from '@/components/HowItWorks'
 import Testimonials from '@/components/Testimonials'
 import Premium from '@/components/Premium'
+import HackathonCard from '@/components/HackathonCard'
 import Newsletter from '@/components/Newsletter'
 import Footer from '@/components/Footer'
 import WaitlistSection from '@/components/WaitlistSection'
@@ -17,6 +18,7 @@ export default function Home() {
       <HowItWorks />
       <Testimonials />
       <Premium />
+      <HackathonCard />
       <WaitlistSection />
       <Newsletter />
       <Footer />

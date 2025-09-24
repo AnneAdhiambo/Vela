@@ -17,8 +17,6 @@ const premiumFeatures = [
   'Unlimited task projects',
   'Goal setting & tracking',
   'Priority support',
-  'Export data',
-  'Team collaboration',
   'Advanced Spotify controls'
 ]
 
